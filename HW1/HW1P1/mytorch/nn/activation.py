@@ -136,7 +136,7 @@ class Softmax:
         for i in range(N):
 
             # Initialize the Jacobian with all zeros.
-            J = np.zeros(C, C) # TODO
+            J = np.zeros((C, C)) # TODO
 
             # Fill the Jacobian matrix according to the conditions described in the writeup
             for m in range(C):
