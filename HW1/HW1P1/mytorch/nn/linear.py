@@ -27,7 +27,6 @@ class Linear:
         # Z = A · WT + ιN · bT
         Z = A @ self.W.T + self.Ones @ self.b.T  # TODO
 
-        # return NotImplemented
         return Z
 
     def backward(self, dLdZ):

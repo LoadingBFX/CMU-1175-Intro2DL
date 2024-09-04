@@ -117,9 +117,7 @@ class Softmax:
         It will use an entire row of Z to compute an output element.
         """
 
-        # Z_shifted for numerical stability. Ensure max is subtracted row-wise
-        Z_shifted = Z - np.max(Z, axis=1, keepdims=True)
-        self.A = np.exp(Z_shifted) / np.sum(np.exp(Z_shifted), axis=1, keepdims=True) # TODO
+        self.A = (np.exp(Z).T / np.sum(np.exp(Z), axis=1).T).T # TODO
 
         return self.A
     
