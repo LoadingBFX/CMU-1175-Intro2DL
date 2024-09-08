@@ -130,7 +130,7 @@ class Softmax:
         # Initialize the final output dLdZ with all zeros. Refer to the writeup and think about the shape.
         dLdZ = np.zeros_like(dLdA) # TODO
 
-        # Fill dLdZ one data point (row) at a time
+        # Fill dLdZ one datasets point (row) at a time
         for i in range(N):
 
             # Initialize the Jacobian with all zeros.

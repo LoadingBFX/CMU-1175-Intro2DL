@@ -5,7 +5,7 @@ class Linear:
 
     def __init__(self, in_features, out_features, debug=False):
         """
-        Initialize the weights and biases with zeros
+        Initialize the checkpoints and biases with zeros
         Checkout np.zeros function.
         Read the writeup to identify the right shapes for all.
         """

@@ -67,7 +67,7 @@ class AudioDataset(torch.utils.data.Dataset):
         self.transcripts    = np.concatenate(self.transcripts)
         # Hint: Use numpy to concatenate
 
-        # Length of the dataset is now the length of concatenated mfccs/transcripts
+        # Length of the datasets is now the length of concatenated mfccs/transcripts
         self.length = len(self.mfccs)
 
         # Take some time to think about what we have done.
@@ -76,7 +76,7 @@ class AudioDataset(torch.utils.data.Dataset):
         # We can introduce context by padding zeros on top and bottom of self.mfcc
         self.mfccs = np.pad(self.mfccs, ((self.context, self.context), (0, 0)), 'constant', constant_values=0) # TODO
 
-        # The available phonemes in the transcript are of string data type
+        # The available phonemes in the transcript are of string datasets type
         # But the neural network cannot predict strings as such.
         # Hence, we map these phonemes to integers
 
@@ -91,8 +91,8 @@ class AudioDataset(torch.utils.data.Dataset):
 
         # TODO: Based on context and offset, return a frame at given index with context frames to the left, and right.
         frames = self.mfccs[ind:ind + 2 * self.context + 1]
-        # After slicing, you get an array of shape 2*context+1 x 28. But our MLP needs 1d data and not 2d.
-        frames = frames.flatten() # TODO: Flatten to get 1d data
+        # After slicing, you get an array of shape 2*context+1 x 28. But our MLP needs 1d datasets and not 2d.
+        frames = frames.flatten() # TODO: Flatten to get 1d datasets
 
         frames      = torch.FloatTensor(frames) # Convert to tensors
         phonemes    = torch.tensor(self.transcripts[ind])
