@@ -3,6 +3,7 @@
 # @Author  : Loading
 
 import os
+import time
 from sched import scheduler
 
 import torch
@@ -35,7 +36,7 @@ def setup_wandb(api_key, project_name, configs):
 
     # Initialize a new wandb run
     run = wandb.init(
-        name=f"{configs['epochs']}_{configs['batch_size']}_{configs['init_lr']}",  # Recommend providing meaningful names
+        name=f"{configs['model_name']}_{configs['epochs']}_{configs['batch_size']}_{configs['init_lr']}",  # Recommend providing meaningful names
         reinit=True,  # Allows reinitializing runs
         project=project_name,  # Project name in wandb account
         config=configs  # Configuration for the run
@@ -186,9 +187,7 @@ if __name__ == '__main__':
     ## Paths
     DATASET_PATH = "./data/11785-f24-hw1p2"
     MODEL_SAVE_DIR = "./checkpoints"
-    BEST_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, "best_model.pth")
-    resume_training = True  # Set to True to resume training
-    print(f"\n[IMPORTANT] - resume flag is : {resume_training}\n")
+
 
 
 
@@ -204,11 +203,13 @@ if __name__ == '__main__':
     ## Model Parameters
     TRAIN_DATASIZE = -1
     VAL_DATASIZE = -1
+    time_stamp = int(time.time())
     config = {
-        'epochs'        : 10,
-        'batch_size'    : 8192,
+        'model_name'    : time_stamp,
+        'epochs'        : 50,
+        'batch_size'    : 4096,
         'context'       : 35,
-        'init_lr'       : 1e-4,
+        'init_lr'       : 1e-3,
     }
     print("== Config ==")
     print("Epochs         : ", config['epochs'])
@@ -217,6 +218,10 @@ if __name__ == '__main__':
     print("init_lr        : ", config['init_lr'])
     print("Input size     : ", (2 * config['context'] + 1) * 28)
     print("Output symbols : ", len(PHONEMES))
+
+    resume_training = False  # Set to True to resume training
+    BEST_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, f"best_model_{time_stamp}.pth")
+    print(f"\n[IMPORTANT] - resume flag is : {resume_training}\n")
 
     # Ensure Save Directory Exists
     if not os.path.exists(MODEL_SAVE_DIR):
@@ -271,7 +276,7 @@ if __name__ == '__main__':
 
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=1, verbose=True)
 
     """# wandb setup """
     torch.cuda.empty_cache()
@@ -283,6 +288,9 @@ if __name__ == '__main__':
     gc.collect()
     wandb.watch(model, log="all")
 
+    print("##### Model Summary #####")
+    summary(model, frames.to(device))
+
     """#
     Training Process
     """
@@ -290,6 +298,7 @@ if __name__ == '__main__':
                 optimizer, criterion, device, config['epochs'],
                 BEST_MODEL_PATH,
                 resume=resume_training)
+
 
     """#
     Testing Process
