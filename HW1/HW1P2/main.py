@@ -7,6 +7,8 @@ import time
 from sched import scheduler
 
 import torch
+
+
 import wandb
 
 from HW1.HW1P2.models.model import Network
@@ -139,6 +141,7 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, device, e
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
         print(f"\tVal Acc: {val_acc * 100:.04f}%\tVal Loss: {val_loss:.04f}")
 
+    start_time = time.time()
     for epoch in range(start_epoch, epochs):
         print(f"\nEpoch {epoch + 1}/{epochs}")
 
@@ -176,6 +179,7 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, device, e
         # Clear GPU cache
         torch.cuda.empty_cache()
         gc.collect()
+        print("\nTime cost: ", time.time() - start_time)
 
 
 
@@ -206,21 +210,20 @@ if __name__ == '__main__':
     time_stamp = int(time.time())
     config = {
         'model_name'    : time_stamp,
-        'epochs'        : 50,
-        'batch_size'    : 4096,
-        'context'       : 35,
-        'init_lr'       : 1e-3,
+        'epochs'        : 100,
+        'batch_size'    : 4096 * 8,
+        'context'       : 31,
+        'init_lr'       : 1e-2,
     }
-    print("== Config ==")
-    print("Epochs         : ", config['epochs'])
-    print("Batch size     : ", config['batch_size'])
-    print("Context        : ", config['context'])
-    print("init_lr        : ", config['init_lr'])
-    print("Input size     : ", (2 * config['context'] + 1) * 28)
-    print("Output symbols : ", len(PHONEMES))
 
-    resume_training = False  # Set to True to resume training
-    BEST_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, f"best_model_{time_stamp}.pth")
+
+    resume_training = True  # Set to True to resume training
+    resume_from = "best_model_1726603820_final.pth"
+
+    if resume_training:
+        BEST_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, resume_from)
+    else:
+        BEST_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, f"best_model_{time_stamp}_final.pth")
     print(f"\n[IMPORTANT] - resume flag is : {resume_training}\n")
 
     # Ensure Save Directory Exists
@@ -267,29 +270,101 @@ if __name__ == '__main__':
     print("##### Model Summary #####")
     summary(model, frames.to(device))
 
+
+
+    # # 先前计算得到的标准化权重
+    # normalized_weights = {
+    #     '[SIL]': 0.0010195278239303483,
+    #     'CH': 0.027262550061861155,
+    #     'AE': 0.0067245591181908934,
+    #     'P': 0.010025373566600252,
+    #     'T': 0.00349931752405353,
+    #     'ER': 0.00645628884112817,
+    #     'W': 0.008772433835102017,
+    #     'AH': 0.0028058526550210627,
+    #     'N': 0.0035802071571017697,
+    #     'M': 0.007422871221713976,
+    #     'IH': 0.004521105137211673,
+    #     'S': 0.0033461244887151615,
+    #     'Z': 0.00633730993488654,
+    #     'R': 0.005619078784083,
+    #     'EY': 0.009346859654934477,
+    #     'L': 0.005358756729683189,
+    #     'D': 0.00547898976560746,
+    #     'AY': 0.00686518673889761,
+    #     'V': 0.012964230101785348,
+    #     'JH': 0.03732634839282497,
+    #     'EH': 0.00716064845345569,
+    #     'DH': 0.009344122854929575,
+    #     'IY': 0.0050510569932791915,
+    #     'OW': 0.010879836040777692,
+    #     'AW': 0.018807655441894396,
+    #     'UW': 0.012031580302845556,
+    #     'HH': 0.009420916838887785,
+    #     'AA': 0.01104404848581983,
+    #     'F': 0.009204785079653907,
+    #     'B': 0.014295731797740048,
+    #     'UH': 0.055647403099402935,
+    #     'K': 0.007087897274718058,
+    #     'AO': 0.011985529883666404,
+    #     'TH': 0.03786628746182458,
+    #     'Y': 0.032112626094812205,
+    #     'NG': 0.017824124416237416,
+    #     'G': 0.025944402196734426,
+    #     'SH': 0.01832560825674828,
+    #     'OY': 0.09279744190122104,
+    #     'ZH': 0.4184353255920183
+    # }
+    # #
+    # # # 创建权重张量，并根据标准化权重更新
+    # weights = torch.tensor([normalized_weights.get(phoneme, 1.0) for phoneme in PHONEMES]).to(device)
+    #
+    # # Defining Loss function.
+    # criterion = torch.nn.CrossEntropyLoss(weight=weights)
+    # # 为每个类别设置默认权重为1
+    # weights = torch.ones(len(PHONEMES)).to(device)
+    # # 比如想降低SIL的权重为0.5
+    # weights[0] = 0.1
+
     # Defining Loss function.
+    # criterion = torch.nn.CrossEntropyLoss(weight=weights)
     criterion = torch.nn.CrossEntropyLoss()
 
     # Defining Optimizer
     # optimizer = torch.optim.Adam(model.parameters(), lr=config['init_lr'])
     optimizer = torch.optim.AdamW(model.parameters(), lr=config['init_lr'], weight_decay=0.01)
-
+    # optimizer = torch.optim.RMSprop(model.parameters(), lr=0.001, alpha=0.9, weight_decay=0.01)
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=1, verbose=True)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3, verbose=True)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=3,  verbose=True)
+
 
     """# wandb setup """
     torch.cuda.empty_cache()
     gc.collect()
 
-    run = setup_wandb(wandb_api_key, "hw1p2", config)
+    run = setup_wandb(wandb_api_key, "hw1p2_final", config)
 
     torch.cuda.empty_cache()
     gc.collect()
     wandb.watch(model, log="all")
 
+
+    print("== Config ==")
+    print("Epochs         : ", config['epochs'])
+    print("Batch size     : ", config['batch_size'])
+    print("Context        : ", config['context'])
+    print("init_lr        : ", config['init_lr'])
+    print("Input size     : ", (2 * config['context'] + 1) * 28)
+    print("Output symbols : ", len(PHONEMES))
+
     print("##### Model Summary #####")
     summary(model, frames.to(device))
+    print("criterion: ", criterion.weight)
+    print("optimizer: ", optimizer)
+    print('scheduler: ', scheduler)
 
     """#
     Training Process

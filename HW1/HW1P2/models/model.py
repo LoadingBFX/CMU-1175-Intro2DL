@@ -1,6 +1,5 @@
 import torch
 import torch.nn
-import torch.nn as nn
 
 class Network(torch.nn.Module):
 
@@ -87,6 +86,707 @@ class Network(torch.nn.Module):
 
             torch.nn.Linear(128, output_size)
         )
+
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.35),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.35),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.35),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.35),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.35),
+        #
+        #     torch.nn.Linear(2048, output_size)
+        # )
+
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     # torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, output_size)
+        # )
+
+        # test1
+        # self.model = torch.nn.Sequential(
+        #
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.18),
+        #
+        #
+        #     torch.nn.Linear(128, output_size)
+        # )
+
+        # test2
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(128, output_size)
+        # )
+
+        # test3
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     # torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(64, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(64, output_size)
+        # )
+
+        # test4
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(64, output_size)
+        # )
+
+        #
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.5),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     # torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, output_size)
+        # )
+        #
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     # torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(64, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(64, output_size)
+        # )
+        #
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 4096),
+        #     torch.nn.BatchNorm1d(4096),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(4096, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     # torch.nn.Dropout(0.18),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(128, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(64, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #
+        #     torch.nn.Linear(64, output_size)
+        # )
+
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(128, output_size)
+        # )
+
+        # self.model = torch.nn.Sequential(
+        #     torch.nn.Linear(input_size, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 2048),
+        #     torch.nn.BatchNorm1d(2048),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     # torch.nn.Linear(2048, 2048),
+        #     # torch.nn.BatchNorm1d(2048),
+        #     # torch.nn.GELU(),
+        #     # torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(2048, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.3),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 1024),
+        #     torch.nn.BatchNorm1d(1024),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(1024, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(512, 512),
+        #     torch.nn.BatchNorm1d(512),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(512, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(256, 256),
+        #     torch.nn.BatchNorm1d(256),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(256, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(128, 128),
+        #     torch.nn.BatchNorm1d(128),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(128, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(64, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(64, 64),
+        #     torch.nn.BatchNorm1d(64),
+        #     torch.nn.GELU(),
+        #     torch.nn.Dropout(0.2),
+        #
+        #     torch.nn.Linear(64, output_size)
+        # )
 
         #  version-1.2 19,995.75KK
         #
