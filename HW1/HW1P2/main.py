@@ -5,6 +5,7 @@
 import os
 import time
 from sched import scheduler
+from turtle import TurtleGraphicsError
 
 import torch
 
@@ -75,6 +76,8 @@ def audio_dataloader(dataset_path, phonemes, context, batch_size, train_data_siz
     print("\n#### Loading dataset...")
     # Create datasets
     train_data = AudioDataset(dataset_path, train_data_size, phonemes, context, 'train-clean-100')
+    # tricky
+    # train_data = AudioDataset(dataset_path, train_data_size, phonemes, context, 'dev-clean')
     val_data = AudioDataset(dataset_path, val_data_size, phonemes, context, 'dev-clean')
     test_data = AudioTestDataset(dataset_path, context, 'test-clean')
 
@@ -126,6 +129,7 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, device, e
         resume (bool): Whether to resume training from a checkpoint.
     """
     best_val_loss = float('inf')
+    best_val_acc = 0.8688
     start_epoch = 0
 
     # Resume training from a checkpoint
@@ -138,6 +142,13 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, device, e
         epochs += start_epoch
         best_val_loss = checkpoint['val_loss']  # Restore best validation loss
         print(start_epoch, best_val_loss)
+
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = config['init_lr']
+            print("lr：", param_group['lr'])
+        #     param_group['weight_decay'] = config['weight_decay']
+        #     print("New weight_decay:", param_group['weight_decay'])
+
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
         print(f"\tVal Acc: {val_acc * 100:.04f}%\tVal Loss: {val_loss:.04f}")
 
@@ -154,14 +165,17 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, device, e
         print(f"\tVal Acc: {val_acc * 100:.04f}%\tVal Loss: {val_loss:.04f}")
 
         # Save the best model
-        if val_loss < best_val_loss:
+        if val_loss < best_val_loss or val_acc > best_val_acc:
             best_val_loss = val_loss
+            best_val_acc = val_acc
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'train_loss': train_loss,
                 'val_loss': val_loss,
+                'best_val_loss': best_val_loss,
+                'best_val_acc': best_val_acc,
             }, model_save_path)
             print(f"New best model saved to {model_save_path} with validation loss {val_loss:.04f}")
 
@@ -174,7 +188,8 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, device, e
             'lr': curr_lr
         })
 
-        scheduler.step(val_loss)
+        # scheduler.step(val_loss)
+        scheduler.step()
 
         # Clear GPU cache
         torch.cuda.empty_cache()
@@ -210,20 +225,21 @@ if __name__ == '__main__':
     time_stamp = int(time.time())
     config = {
         'model_name'    : time_stamp,
-        'epochs'        : 100,
-        'batch_size'    : 4096 * 8,
-        'context'       : 31,
-        'init_lr'       : 1e-2,
+        'epochs'        : 5,
+        'batch_size'    : 4096,
+        'context'       : 30,
+        'init_lr'       : 0.00004,
+        'weight_decay' : 0.01,
     }
 
 
     resume_training = True  # Set to True to resume training
-    resume_from = "best_model_1726603820_final.pth"
+    resume_from = "best_model_1726848272_test.pth"
 
     if resume_training:
         BEST_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, resume_from)
     else:
-        BEST_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, f"best_model_{time_stamp}_final.pth")
+        BEST_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, f"best_model_{time_stamp}_test.pth")
     print(f"\n[IMPORTANT] - resume flag is : {resume_training}\n")
 
     # Ensure Save Directory Exists
@@ -332,20 +348,21 @@ if __name__ == '__main__':
 
     # Defining Optimizer
     # optimizer = torch.optim.Adam(model.parameters(), lr=config['init_lr'])
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config['init_lr'], weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config['init_lr'], weight_decay=config['weight_decay'])
     # optimizer = torch.optim.RMSprop(model.parameters(), lr=0.001, alpha=0.9, weight_decay=0.01)
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3, verbose=True)
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=3,  verbose=True)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=5,  verbose=True)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config['epochs'])
 
 
     """# wandb setup """
     torch.cuda.empty_cache()
     gc.collect()
 
-    run = setup_wandb(wandb_api_key, "hw1p2_final", config)
+    run = setup_wandb(wandb_api_key, "hw1p2_test", config)
 
     torch.cuda.empty_cache()
     gc.collect()

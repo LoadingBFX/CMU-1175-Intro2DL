@@ -18,7 +18,7 @@ PHONEMES = [
     'V', 'W', 'Y', 'Z', 'ZH', '[SOS]', '[EOS]']
 
 if __name__ == '__main__':
-    MODEL_SAVE_PATH = "checkpoints/best_model - 0.85686.pth"
+    MODEL_SAVE_PATH = "checkpoints/best_model_1726848272_test.pth"
     DATASET_PATH = "./data/11785-f24-hw1p2"
 
     # Determine device
@@ -26,10 +26,8 @@ if __name__ == '__main__':
     print(f"*_ Using device: {device}\n")
 
     config = {
-        'epochs'        : 50,
-        'batch_size'    : 4096,
-        'context'       : 35,
-        'init_lr'       : 1e-4,
+        'batch_size': 4096,
+        'context': 30,
     }
 
     # Calculate input size
