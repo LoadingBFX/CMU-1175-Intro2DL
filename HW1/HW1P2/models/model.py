@@ -1523,7 +1523,7 @@ class Network(torch.nn.Module):
         #
         #     torch.nn.Linear(128, output_size)
         # )
-
+        # Final version 86.986%
         self.model = torch.nn.Sequential(
             torch.nn.Linear(input_size, 1024),
             torch.nn.BatchNorm1d(1024),
