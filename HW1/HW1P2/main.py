@@ -5,8 +5,6 @@
 import os
 import time
 from sched import scheduler
-from turtle import TurtleGraphicsError
-
 import torch
 
 
@@ -225,10 +223,10 @@ if __name__ == '__main__':
     time_stamp = int(time.time())
     config = {
         'model_name'    : time_stamp,
-        'epochs'        : 5,
+        'epochs'        : 200,
         'batch_size'    : 4096,
         'context'       : 30,
-        'init_lr'       : 0.00004,
+        'init_lr'       : 0.001,
         'weight_decay' : 0.01,
     }
 
