@@ -8,17 +8,13 @@ This repository contains the solution for HW1P2, a phoneme recognition task usin
 HW1P2/
 │
 ├── checkpoints/                # Directory to save model checkpoints
-├── config/                     # Directory for configuration files
 ├── data/                       # Directory for dataset storage
 ├── datasets/                   # Dataset handling scripts
-│   ├── analysis.py             # Data analysis script
 │   ├── data_loader.py          # Data loader for training/validation data
 │   └── test_data_loader.py     # Data loader for test data
 │
 ├── models/                     # Model-related files
 │   └── model.py                # Model architecture
-│
-├── notebook/                   # Jupyter notebooks for experiments
 │
 ├── src/                        # Source files for model training, evaluation, and testing
 │   ├── eval.py                 # Evaluation script
@@ -26,26 +22,20 @@ HW1P2/
 │   ├── train.py                # Training script
 │   └── utils.py                # Utility functions
 │
-├── wandb/                      # Wandb experiment tracking folder
-│   └── generate_submission.py  # Script to generate submissions
-│
-├── Hw1p2_Fall_2024_Writeup.pdf  # Project write-up
+│── generate_submission.py      # Script to generate submissions
 ├── main.py                     # Main script to run the model
 ├── README.md                   # Project documentation
-├── requirements.txt            # Python package dependencies
-├── submission.csv              # Final submission file with predictions
-├── submission_test_83.csv      # Additional test submission file
-└── model_arch.txt              # Model architecture description
+└── requirements.txt            # Python package dependencies
 ```
 
 ## How to Execute
-Prerequisites
-Install Dependencies:
+### Prerequisites
+- **Install Dependencies**:
 Ensure you have Python installed. Install required packages by running:
 ```aiignore
 pip install -r requirements.txt
 ```
-Dataset:
+- **Dataset**:
 Place the dataset in the data/ directory. The dataset directory should have the following structure:
 ```aiignore
 data/
@@ -55,16 +45,15 @@ data/
     └── test-clean/     # Test data
 
 ```
-
-Run Training
+### Run Training:
 To start training the phoneme recognition model, execute the main.py file. You can adjust the configuration parameters as needed.
 ```aiignore
 python main.py
 ```
 
-Parameters Configuration
+### Parameters Configuration
 In the main.py, key parameters are stored in a dictionary named config. You can modify the parameters before running the script.
-```aiignore
+```python
 config = {
     'model_name'    : time_stamp,     # Unique name for the model
     'epochs'        : 200,            # Number of training epochs
@@ -75,7 +64,7 @@ config = {
 }
 
 ```
-Resume Training: If you want to resume training from a checkpoint, set resume_training to True and specify the path to the checkpoint in the resume_from variable.
+- **Resume Training**: If you want to resume training from a checkpoint, set resume_training to True and specify the path to the checkpoint in the resume_from variable.
 
 ### Hyperparameters
 You can set additional hyperparameters like the optimizer, learning rate schedule, and the loss function:
@@ -86,17 +75,17 @@ You can set additional hyperparameters like the optimizer, learning rate schedul
 ```python
    optimizer = torch.optim.AdamW(model.parameters(), lr=config['init_lr'], weight_decay=config['weight_decay'])
 ```
-Scheduler:
+- **Scheduler**:
 The learning rate scheduler is set to CosineAnnealingLR to gradually reduce the learning rate during training.
-```aiignore
+```python
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config['epochs'])
 ```
-Loss Function:
+- **Loss Function**:
 The loss function used is CrossEntropyLoss:
-```aiignore
+```python
 criterion = torch.nn.CrossEntropyLoss()
 ```
-### Model Summary 
+## Model Summary 
 ```aiignore
  11 ----------------------------------------------------------------------------------------------------
  12 Layer                   Kernel Shape         Output Shape         # Params (K)      # Mult-Adds (M)
