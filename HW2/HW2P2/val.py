@@ -4,9 +4,17 @@
 @file: val.py
 @time: 9/24/24 13:01
 """
+import torch
+
+from tqdm import tqdm
+
+from metrics.AverageMeter import AverageMeter
+from utils import accuracy
+
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 @torch.no_grad()
-def valid_epoch_cls(model, dataloader, device, config):
+def valid_epoch_cls(model, dataloader, criterion, device, config):
 
     model.eval()
     batch_bar = tqdm(total=len(dataloader), dynamic_ncols=True, position=0, leave=False, desc='Val Cls.', ncols=5)

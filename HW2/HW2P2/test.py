@@ -4,6 +4,12 @@
 @file: test.py
 @time: 9/24/24 18:42
 """
+import torch
+import torch.nn.functional as F
+from tqdm import tqdm
+
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 def test_epoch_ver(model, pair_data_loader, config):
 
     model.eval()

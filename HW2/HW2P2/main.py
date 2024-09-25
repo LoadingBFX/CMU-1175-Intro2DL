@@ -6,6 +6,8 @@ import time
 
 import torch
 import torchvision
+from pytorch_metric_learning.losses import ArcFaceLoss
+
 import wandb
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
@@ -22,6 +24,52 @@ from train import train_epoch
 from utils import save_model
 from val import valid_epoch_cls
 from ver import valid_epoch_ver
+import yaml
+
+def load_config(config_file):
+    with open(config_file, 'r', encoding='utf-8') as file:
+        config = yaml.safe_load(file)
+    return config
+
+def initialize_model_optimizer_scheduler(model, config):
+    # Defining Optimizer
+    optimizer = None
+    # Defining Scheduler
+    scheduler = None
+
+    optimizer_config = config['optimizer']
+    if optimizer_config['type'] == 'AdamW':
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=optimizer_config['lr'],
+            weight_decay=optimizer_config['weight_decay']
+        )
+    elif optimizer_config['type'] == 'SGD':
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=optimizer_config['lr'],
+            momentum=optimizer_config.get('momentum', 0.9),  # Optional for SGD
+            weight_decay=optimizer_config['weight_decay']
+        )
+
+    # 根据 config 选择调度器
+    scheduler_config = config['scheduler']
+    if scheduler_config['type'] == 'CosineAnnealingWarmRestarts':
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=scheduler_config['T_0'],
+            T_mult=scheduler_config['T_mult'],
+            eta_min=scheduler_config['eta_min']
+        )
+    elif scheduler_config['type'] == 'CosineAnnealingLR':
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=scheduler_config['T_max'],
+        )
+
+    print(f"optimizer: {optimizer} \n scheduler: {scheduler}")
+
+    return optimizer, scheduler
 
 
 def create_dataloader(cfg):
@@ -59,8 +107,8 @@ def create_dataloader(cfg):
                              shuffle=False,
                              num_workers=4)
 
-    # TODO: Add your validation pair txt file
-    pair_dataset = ImagePairDataset(data_dir, csv_file=cfg['val_pairs_file'], transform=val_transforms)
+
+    pair_dataset = ImagePairDataset(cfg['data_ver_dir'], csv_file=cfg['val_pairs_file'], transform=val_transforms)
     pair_dataloader = torch.utils.data.DataLoader(pair_dataset,
                                                   batch_size=cfg["batch_size"],
                                                   shuffle=False,
@@ -68,7 +116,7 @@ def create_dataloader(cfg):
                                                   num_workers=4)
 
     # TODO: Add your validation pair txt file
-    test_pair_dataset = TestImagePairDataset(data_dir, csv_file=cfg['test_pairs_file'], transform=val_transforms)
+    test_pair_dataset = TestImagePairDataset(cfg['data_ver_dir'], csv_file=cfg['test_pairs_file'], transform=val_transforms)
     test_pair_dataloader = torch.utils.data.DataLoader(test_pair_dataset,
                                                        batch_size=cfg["batch_size"],
                                                        shuffle=False,
@@ -108,63 +156,7 @@ def create_dataloader(cfg):
 
     return train_dataloader, val_dataloader, pair_dataloader, test_pair_dataloader
 
-
-if __name__ == '__main__':
-    wandb_api_key = "46b9373c96fe8f8327255e7da8a4046da7ffeef6"
-    DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-    print("Device: ", DEVICE)
-
-    config = {
-        'batch_size': 64,
-        'lr': 0.1,
-        'epochs': 20,
-        'weight_decay': 0.01,
-        'data_dir': "./11785-hw-2-p-2-face-verification-fall-2024/11-785-f24-hw2p2-verification/cls_data",
-        'data_ver_dir': "./11785-hw-2-p-2-face-verification-fall-2024/11-785-f24-hw2p2-verification/ver_data",
-        'val_pairs_file': "./11785-hw-2-p-2-face-verification-fall-2024/11-785-f24-hw2p2-verification/val_pairs.txt",
-        'test_pairs_file':'./11785-hw-2-p-2-face-verification-fall-2024/11-785-f24-hw2p2-verification/test_pairs.txt',
-        'checkpoint_dir': "./checkpoint"
-        # Include other parameters as needed.
-    }
-
-    # Create Data loader
-    print("==Create Dataloaders for Image Recognition==")
-    train_loader, val_loader, pair_loader, test_pair_loader = create_dataloader(config)
-
-    # Initialize model
-    print("==Create Model==")
-    model = CNNNetwork().to(DEVICE)
-    x = torch.randn(1, 3, 112, 112).to(DEVICE)
-    summary(model, x)
-
-    # Defining Loss function
-    criterion = torch.nn.CrossEntropyLoss() # TODO: What loss do you need for a multi class classification problem and would label smoothing be beneficial here?
-
-    # Defining Optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config['lr'], weight_decay=config['weight_decay']) # TODO: Feel free to pick a optimizer
-
-    # Defining Scheduler
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config['epochs'])  # TODO: Use a good scheduler such as ReduceLRonPlateau, StepLR, MultistepLR, CosineAnnealing, etc.
-
-    # Initialising mixed-precision training. # Good news. We've already implemented FP16 (Mixed precision training) for you
-    # It is useful only in the case of compatible GPUs such as T4/V100
-    scaler = torch.cuda.amp.GradScaler()
-
-    wandb.login(key=wandb_api_key)
-    # Create your wandb run
-    run = wandb.init(
-        name="early-submission",  ## Wandb creates random run names if you skip this field
-        reinit=True,  ### Allows reinitalizing runs when you re-run this cell
-        # run_id = int(time.time()),### Insert specific run id here if you want to resume a previous run
-        # resume = "must" ### You need this to resume previous runs, but comment out reinit = True when using this
-        project="hw2p2-ablations",  ### Project should be created in your wandb account
-        config=config  ### Wandb Config for your run
-    )
-
-    gc.collect()  # These commands help you when you face CUDA OOM error
-    torch.cuda.empty_cache()
-
-    ## Experiments
+def train_and_val(model, optimizer, scheduler, criterion, scaler, train_loader, val_loader, pair_loader, config, DEVICE, run):
     e = 0
     best_valid_cls_acc = 0.0
     eval_cls = True
@@ -174,7 +166,8 @@ if __name__ == '__main__':
         print("\nEpoch {}/{}".format(epoch + 1, config['epochs']))
 
         # train
-        train_cls_acc, train_loss = train_epoch(model, train_loader, optimizer, scheduler, scaler, DEVICE, config)
+        train_cls_acc, train_loss = train_epoch(model, train_loader, criterion, optimizer, scheduler, scaler, DEVICE,
+                                                config)
         curr_lr = float(optimizer.param_groups[0]['lr'])
         print("\nEpoch {}/{}: \nTrain Cls. Acc {:.04f}%\t Train Cls. Loss {:.04f}\t Learning Rate {:.04f}".format(
             epoch + 1, config['epochs'], train_cls_acc, train_loss, curr_lr))
@@ -184,7 +177,7 @@ if __name__ == '__main__':
         }
         # classification validation
         if eval_cls:
-            valid_cls_acc, valid_loss = valid_epoch_cls(model, val_loader, DEVICE, config)
+            valid_cls_acc, valid_loss = valid_epoch_cls(model, val_loader, criterion, DEVICE, config)
             print("Val Cls. Acc {:.04f}%\t Val Cls. Loss {:.04f}".format(valid_cls_acc, valid_loss))
             metrics.update({
                 'valid_cls_acc': valid_cls_acc,
@@ -222,11 +215,72 @@ if __name__ == '__main__':
         if run is not None:
             run.log(metrics)
 
+
+def setup_wandb(model, cfg):
+    wandb_config = cfg['wandb']
+    wandb.login(key=wandb_config['wandb_api_key'])
+
+    # Create your wandb run
+    run = wandb.init(
+        id=wandb_config.get('id', str(int(time.time()))),
+        name=wandb_config.get('name', None),
+        reinit=wandb_config['reinit'],
+        project=wandb_config['project'],
+        resume=wandb_config.get('resume', None),
+        config = {key: value for key, value in cfg.items() if key != 'wandb'},
+    )
+
+    x = torch.randn(1, 3, 112, 112).to(cfg['device'])
+    summary(model, x)
+    print()
+
+    return run
+
+
+
+def main():
+    config = load_config("config.yaml")
+    config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+    DEVICE = config['device']
+
+
+    # Create Data loader
+    print("==Create Dataloaders for Image Recognition==")
+    train_loader, val_loader, pair_loader, test_pair_loader = create_dataloader(config)
+
+    # Initialize model
+    print("==Create Model==")
+    model = CNNNetwork().to(DEVICE)
+
+
+    # Defining Loss function
+    criterion = ArcFaceLoss(num_classes=8631, embedding_size=8631)
+    # criterion = torch.nn.CrossEntropyLoss()
+    optimizer, scheduler = initialize_model_optimizer_scheduler(model, config)
+
+    # Initialising mixed-precision training.
+    scaler = torch.cuda.amp.GradScaler()
+
+    run = setup_wandb(model, config)
+
+    gc.collect()  # These commands help you when you face CUDA OOM error
+    torch.cuda.empty_cache()
+
+    ## Experiments
+    train_and_val(model, optimizer, scheduler, criterion, scaler, train_loader, val_loader, pair_loader, config, DEVICE,
+                  run)
+
     scores = test_epoch_ver(model, test_pair_loader, config)
     with open("verification_early_submission.csv", "w+") as f:
         f.write("ID,Label\n")
         for i in range(len(scores)):
             f.write("{},{}\n".format(i, scores[i]))
+
+
+    # kaggle competitions submit -c 11785-hw-2-p-2-face-verification-fall-2024 -f submission.csv -m "Message"
+
+if __name__ == '__main__':
+    main()
 
 
 

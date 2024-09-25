@@ -4,6 +4,16 @@
 @file: ver.py
 @time: 9/24/24 13:01
 """
+import torch
+import torch.nn.functional as F
+from tqdm import tqdm
+import numpy as np
+
+from utils import get_ver_metrics
+
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
 
 def valid_epoch_ver(model, pair_data_loader, device, config):
 

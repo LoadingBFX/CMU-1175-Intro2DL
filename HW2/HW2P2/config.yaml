@@ -1,0 +1,36 @@
+# wandb
+wandb:
+  name: "early-submission"  # Optional, could be left empty for random name
+  reinit: true
+  project: "hw2p2-ablations"
+  id: None  # 可以为 None，或者指定具体的 run_id 来恢复
+  resume: false  #
+  wandb_api_key: "46b9373c96fe8f8327255e7da8a4046da7ffeef6"
+
+# folder path
+data_dir: "./data/11-785-f24-hw2p2-verification/cls_data"
+data_ver_dir: "./data/11-785-f24-hw2p2-verification/ver_data"
+val_pairs_file: "./data/11-785-f24-hw2p2-verification/val_pairs.txt"
+test_pairs_file: './data/11-785-f24-hw2p2-verification/test_pairs.txt'
+checkpoint_dir: "./checkpoints"
+
+
+# Parameters
+batch_size: 1024
+epochs: 20
+
+# Optimizer parameters
+optimizer:
+  type: 'AdamW'  # 'AdamW' or 'SGD'
+  lr: 0.01
+  weight_decay: 0.01
+  momentum: 0.9  # This is for SGD
+
+# Scheduler parameters
+scheduler:
+  type: 'CosineAnnealingLR'  # 'CosineAnnealingLR' or 'CosineAnnealingWarmRestarts'
+  T_max: 10  # For CosineAnnealingLR
+
+  T_0: 10 # For CosineAnnealingWarmRestarts
+  T_mult: 2 # For CosineAnnealingWarmRestarts
+  eta_min: 1e-5 # For CosineAnnealingWarmRestarts

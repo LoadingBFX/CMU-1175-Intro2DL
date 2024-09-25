@@ -4,8 +4,14 @@
 @file: train.py
 @time: 9/24/24 12:59
 """
+import torch
+from tqdm import tqdm
 
-def train_epoch(model, dataloader, optimizer, lr_scheduler, scaler, device, config):
+from metrics.AverageMeter import AverageMeter
+from utils import accuracy
+
+
+def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, device, config):
 
     model.train()
 
