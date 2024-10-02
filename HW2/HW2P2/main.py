@@ -6,10 +6,9 @@ import time
 
 import torch
 import torchvision
-from pytorch_metric_learning.losses import ArcFaceLoss
+from tqdm import tqdm
 
 import wandb
-from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
 import os
 import gc
@@ -18,10 +17,14 @@ from torchsummaryX import summary
 
 from dataset.ImagePairDataset import ImagePairDataset
 from dataset.TestImagePairDataset import TestImagePairDataset
+
+from dataset.TripletImageDataset import TripletImageDataset
+from loss.Triplet import TripletLoss
 from model.model import CNNNetwork
+from model.senet import SENetwork
 from test import test_epoch_ver
-from train import train_epoch
-from utils import save_model
+from train import train_epoch, train_epoch_triplet
+from utils import save_model, load_model
 from val import valid_epoch_cls
 from ver import valid_epoch_ver
 import yaml
@@ -77,13 +80,45 @@ def create_dataloader(cfg):
 
     train_dir = os.path.join(data_dir, 'train')
     val_dir = os.path.join(data_dir, 'dev')
+    # https: // pytorch.org / vision / stable / transforms.html
 
     # train transforms
+    # train_transforms = torchvision.transforms.Compose([
+    #     torchvision.transforms.Resize(112),  # Why are we resizing the Image?
+    #     torchvision.transforms.ToTensor(),
+    #     torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
+    #                                      std=[0.5, 0.5, 0.5])])
+
     train_transforms = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(112),  # Why are we resizing the Image?
+        torchvision.transforms.RandomHorizontalFlip(0.5),
+        torchvision.transforms.ColorJitter(brightness=0.16, contrast=0.15, saturation=0.1),
+        torchvision.transforms.RandomRotation(18),
+        torchvision.transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+        torchvision.transforms.RandomPerspective(distortion_scale=0.2, p=0.2),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                         std=[0.5, 0.5, 0.5])])
+                                         std=[0.5, 0.5, 0.5]),
+
+        torchvision.transforms.RandomErasing(p=0.3, scale=(0.05, 0.1)),
+    ])
+
+    # train_transforms = torchvision.transforms.Compose([
+    #     torchvision.transforms.RandomHorizontalFlip(0.5),  # Keep this as it is
+    #     torchvision.transforms.ColorJitter(brightness=0.3, contrast=0.2, saturation=0.1),  # Increase brightness
+    #     torchvision.transforms.RandomRotation(10),  # Reduce rotation to prevent excessive face angle changes
+    #     torchvision.transforms.RandomAffine(degrees=0, translate=(0.05, 0.05), scale=(0.95, 1.05)),
+    #     # Slightly reduce translation and scaling
+    #     torchvision.transforms.RandomPerspective(distortion_scale=0.1, p=0.2),  # Reduce distortion scale
+    #
+    #     torchvision.transforms.GaussianBlur(kernel_size=(3, 5), sigma=(0.1, 1.0)),
+    #     # Reduce the blur kernel size and sigma for less aggressive blurring
+    #     torchvision.transforms.Resize(112),  # Resize is necessary to ensure uniform input size for the network
+    #     torchvision.transforms.ToTensor(),
+    #     torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
+    #                                      std=[0.5, 0.5, 0.5]),
+    #
+    #     torchvision.transforms.RandomErasing(p=0.2, scale=(0.02, 0.1)),  # Keep erasing as is
+    # ])
 
     # val transforms
     val_transforms = torchvision.transforms.Compose([
@@ -94,13 +129,17 @@ def create_dataloader(cfg):
 
     # get datasets
     train_dataset = torchvision.datasets.ImageFolder(train_dir, transform=train_transforms)
+
+    # 使用自定义数据集
+    # train_dataset = TripletImageDataset(train_dataset, transform=train_transforms)
+
     val_dataset = torchvision.datasets.ImageFolder(val_dir, transform=val_transforms)
 
     train_dataloader = DataLoader(train_dataset,
                                batch_size=cfg["batch_size"],
                                shuffle=True,
                                pin_memory=True,
-                               num_workers=8,
+                               num_workers=16,
                                sampler=None)
     val_dataloader = DataLoader(val_dataset,
                              batch_size=cfg["batch_size"],
@@ -115,7 +154,7 @@ def create_dataloader(cfg):
                                                   pin_memory=True,
                                                   num_workers=4)
 
-    # TODO: Add your validation pair txt file
+
     test_pair_dataset = TestImagePairDataset(cfg['data_ver_dir'], csv_file=cfg['test_pairs_file'], transform=val_transforms)
     test_pair_dataloader = torch.utils.data.DataLoader(test_pair_dataset,
                                                        batch_size=cfg["batch_size"],
@@ -157,43 +196,50 @@ def create_dataloader(cfg):
     return train_dataloader, val_dataloader, pair_dataloader, test_pair_dataloader
 
 def train_and_val(model, optimizer, scheduler, criterion, scaler, train_loader, val_loader, pair_loader, config, DEVICE, run):
-    e = 0
+    e = config['e']
     best_valid_cls_acc = 0.0
     eval_cls = True
     best_valid_ret_acc = 0.0
     for epoch in range(e, config['epochs']):
-        # epoch
-        print("\nEpoch {}/{}".format(epoch + 1, config['epochs']))
+        # # epoch
+        tqdm.write("\nEpoch {}/{}".format(epoch + 1, config['epochs']))
 
         # train
         train_cls_acc, train_loss = train_epoch(model, train_loader, criterion, optimizer, scheduler, scaler, DEVICE,
                                                 config)
+
+        # train_cls_acc, train_loss = train_epoch_triplet(model, train_loader, criterion[0], criterion[1],optimizer, scheduler, scaler, DEVICE,
+        #                                         config)
+
         curr_lr = float(optimizer.param_groups[0]['lr'])
-        print("\nEpoch {}/{}: \nTrain Cls. Acc {:.04f}%\t Train Cls. Loss {:.04f}\t Learning Rate {:.04f}".format(
+        tqdm.write("\nEpoch {}/{}: \nTrain Cls. Acc {:.04f}%\t Train Cls. Loss {:.04f}\t Learning Rate {:.04f}".format(
             epoch + 1, config['epochs'], train_cls_acc, train_loss, curr_lr))
         metrics = {
             'train_cls_acc': train_cls_acc,
             'train_loss': train_loss,
+            'learning_rate': curr_lr
         }
         # classification validation
         if eval_cls:
+            # valid_cls_acc, valid_loss = valid_epoch_cls(model, val_loader, criterion[0], DEVICE, config)
             valid_cls_acc, valid_loss = valid_epoch_cls(model, val_loader, criterion, DEVICE, config)
-            print("Val Cls. Acc {:.04f}%\t Val Cls. Loss {:.04f}".format(valid_cls_acc, valid_loss))
+            tqdm.write("\nVal Cls. Acc {:.04f}%\t Val Cls. Loss {:.04f}".format(valid_cls_acc, valid_loss))
             metrics.update({
                 'valid_cls_acc': valid_cls_acc,
                 'valid_loss': valid_loss,
             })
 
         # retrieval validation
-        valid_ret_acc = valid_epoch_ver(model, pair_loader, DEVICE, config)
-        print("Val Ret. Acc {:.04f}%".format(valid_ret_acc))
+        valid_ret_acc, valid_ret_eer = valid_epoch_ver(model, pair_loader, DEVICE, config)
+        tqdm.write("\nVal Ret. Acc {:.04f}% \t Val Ret. EER {:.04f}%".format(valid_ret_acc, valid_ret_eer))
         metrics.update({
-            'valid_ret_acc': valid_ret_acc
+            'valid_ret_acc': valid_ret_acc,
+            'valid_ret_eer': valid_ret_eer,
         })
 
         # save model
         save_model(model, optimizer, scheduler, metrics, epoch, os.path.join(config['checkpoint_dir'], 'last.pth'))
-        print("Saved epoch model")
+        tqdm.write("Saved last epoch model")
 
         # save best model
         if eval_cls:
@@ -202,14 +248,14 @@ def train_and_val(model, optimizer, scheduler, criterion, scaler, train_loader, 
                 save_model(model, optimizer, scheduler, metrics, epoch,
                            os.path.join(config['checkpoint_dir'], 'best_cls.pth'))
                 wandb.save(os.path.join(config['checkpoint_dir'], 'best_cls.pth'))
-                print("Saved best classification model")
+                tqdm.write(f"\n######### Saved best classification model best_valid_cls_acc: {best_valid_cls_acc}#########")
 
         if valid_ret_acc >= best_valid_ret_acc:
             best_valid_ret_acc = valid_ret_acc
             save_model(model, optimizer, scheduler, metrics, epoch,
                        os.path.join(config['checkpoint_dir'], 'best_ret.pth'))
             wandb.save(os.path.join(config['checkpoint_dir'], 'best_ret.pth'))
-            print("Saved best retrieval model")
+            tqdm.write(f"\n****** Saved best retrieval model best_valid_ret_acc: {best_valid_ret_acc} ******")
 
         # log to tracker
         if run is not None:
@@ -219,20 +265,22 @@ def train_and_val(model, optimizer, scheduler, criterion, scaler, train_loader, 
 def setup_wandb(model, cfg):
     wandb_config = cfg['wandb']
     wandb.login(key=wandb_config['wandb_api_key'])
+    resume = cfg['resume']['resume']
+    _id = str(int(time.time()))
+    # if resume:
+    #     _id = cfg['resume']['id']
 
     # Create your wandb run
     run = wandb.init(
-        id=wandb_config.get('id', str(int(time.time()))),
+        id=_id,
         name=wandb_config.get('name', None),
-        reinit=wandb_config['reinit'],
         project=wandb_config['project'],
-        resume=wandb_config.get('resume', None),
+        resume= resume,
         config = {key: value for key, value in cfg.items() if key != 'wandb'},
     )
 
     x = torch.randn(1, 3, 112, 112).to(cfg['device'])
     summary(model, x)
-    print()
 
     return run
 
@@ -243,38 +291,56 @@ def main():
     config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
     DEVICE = config['device']
 
+    # Initialize model
+    print("==Create Model==")
+    model = CNNNetwork().to(DEVICE)
+    # model = SENetwork().to(DEVICE)
+
+    # Defining Loss function
+    # criterion = ArcFaceLoss(num_classes=8631, embedding_size=8631)
+    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
+    # criterion =    torch.nn.CrossEntropyLoss()
+    criterion_triplet = TripletLoss(margin=1.0)
+
+    optimizer, scheduler = initialize_model_optimizer_scheduler(model, config)
+
+    if config['resume']['resume']:
+        model, optimizer, scheduler, epoch, metrics = load_model(model, config, optimizer, scheduler, './checkpoints/last.pth')
+        config['e'] = epoch + 1
+        config['epochs'] += epoch
+        print(f"!!!- [Resuming from {'./checkpoints/last.pth'}]  "
+              f"\n epoch_from {config['e']} "
+              f"\n optimizer : {optimizer} "
+              f"\n scheduler: {scheduler} "
+              f"\n metrics: {metrics}")
+
+    run = setup_wandb(model, config)
 
     # Create Data loader
     print("==Create Dataloaders for Image Recognition==")
     train_loader, val_loader, pair_loader, test_pair_loader = create_dataloader(config)
 
-    # Initialize model
-    print("==Create Model==")
-    model = CNNNetwork().to(DEVICE)
-
-
-    # Defining Loss function
-    criterion = ArcFaceLoss(num_classes=8631, embedding_size=8631)
-    # criterion = torch.nn.CrossEntropyLoss()
-    optimizer, scheduler = initialize_model_optimizer_scheduler(model, config)
 
     # Initialising mixed-precision training.
     scaler = torch.cuda.amp.GradScaler()
 
-    run = setup_wandb(model, config)
 
     gc.collect()  # These commands help you when you face CUDA OOM error
     torch.cuda.empty_cache()
 
     ## Experiments
-    train_and_val(model, optimizer, scheduler, criterion, scaler, train_loader, val_loader, pair_loader, config, DEVICE,
+    train_and_val(model, optimizer, scheduler, criterion, scaler, train_loader, val_loader,
+                  pair_loader, config, DEVICE,
                   run)
+    # train_and_val(model, optimizer, scheduler, [criterion, criterion_triplet], scaler, train_loader, val_loader, pair_loader, config, DEVICE,
+    #               run)
 
     scores = test_epoch_ver(model, test_pair_loader, config)
     with open("verification_early_submission.csv", "w+") as f:
         f.write("ID,Label\n")
         for i in range(len(scores)):
             f.write("{},{}\n".format(i, scores[i]))
+    print("verification_early_submission.csv saved")
 
 
     # kaggle competitions submit -c 11785-hw-2-p-2-face-verification-fall-2024 -f submission.csv -m "Message"

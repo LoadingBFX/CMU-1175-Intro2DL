@@ -12,15 +12,25 @@ import numpy as np
 from utils import get_ver_metrics
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+from pprint import pprint
 
 
+def print_metrics(metric_dict):
+    print("Verification Metrics:")
+    print(f"{'ACC':<15}: {metric_dict['ACC']:.2f}%")
+    print(f"{'EER':<15}: {metric_dict['EER']:.4f}%")
+    print(f"{'AUC':<15}: {metric_dict['AUC']:.2f}%")
+
+    print("\nTrue Positive Rates at Specific False Positive Rates:")
+    for tpr, value in metric_dict['TPRs']:
+        print(f"{tpr:<20}: {value:.4f}%")
 
 def valid_epoch_ver(model, pair_data_loader, device, config):
 
     model.eval()
     scores = []
     match_labels = []
-    batch_bar = tqdm(total=len(pair_data_loader), dynamic_ncols=True, position=0, leave=False, desc='Val Veri.')
+    batch_bar = tqdm(total=len(pair_data_loader), dynamic_ncols=True, position=0, leave=True, desc='Val Veri.')
     for i, (images1, images2, labels) in enumerate(pair_data_loader):
 
         # match_labels = match_labels.to(device)
@@ -41,6 +51,7 @@ def valid_epoch_ver(model, pair_data_loader, device, config):
 
     FPRs=['1e-4', '5e-4', '1e-3', '5e-3', '5e-2']
     metric_dict = get_ver_metrics(match_labels.tolist(), scores.tolist(), FPRs)
-    print(metric_dict)
+    # print(metric_dict)
+    print_metrics(metric_dict)
 
-    return metric_dict['ACC']
+    return metric_dict['ACC'], metric_dict['EER']

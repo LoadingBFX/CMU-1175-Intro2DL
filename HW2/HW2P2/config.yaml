@@ -1,10 +1,7 @@
 # wandb
 wandb:
-  name: "early-submission"  # Optional, could be left empty for random name
-  reinit: true
+  name: "resnet50_09CrossEntropyLoss+01Triplet_500"  # Optional, could be left empty for random name
   project: "hw2p2-ablations"
-  id: None  # 可以为 None，或者指定具体的 run_id 来恢复
-  resume: false  #
   wandb_api_key: "46b9373c96fe8f8327255e7da8a4046da7ffeef6"
 
 # folder path
@@ -15,9 +12,16 @@ test_pairs_file: './data/11-785-f24-hw2p2-verification/test_pairs.txt'
 checkpoint_dir: "./checkpoints"
 
 
+
+resume:
+  resume: false
+  id: '1727409915'
+
+
 # Parameters
-batch_size: 1024
-epochs: 20
+batch_size: 64
+epochs: 500
+e: 0
 
 # Optimizer parameters
 optimizer:
@@ -29,8 +33,8 @@ optimizer:
 # Scheduler parameters
 scheduler:
   type: 'CosineAnnealingLR'  # 'CosineAnnealingLR' or 'CosineAnnealingWarmRestarts'
-  T_max: 10  # For CosineAnnealingLR
+  T_max: 500  # For CosineAnnealingLR
 
-  T_0: 10 # For CosineAnnealingWarmRestarts
+  T_0: 40 # For CosineAnnealingWarmRestarts
   T_mult: 2 # For CosineAnnealingWarmRestarts
-  eta_min: 1e-5 # For CosineAnnealingWarmRestarts
+  eta_min: 0 # For CosineAnnealingWarmRestarts

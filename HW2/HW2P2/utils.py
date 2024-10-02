@@ -59,17 +59,19 @@ def save_model(model, optimizer, scheduler, metrics, epoch, path):
          path)
 
 
-def load_model(model, optimizer=None, scheduler=None, path='./checkpoint.pth'):
+def load_model(model, cfg, optimizer=None, scheduler=None, path='./checkpoint.pth'):
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
     if optimizer is not None:
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = cfg['optimizer']['lr']
     else:
         optimizer = None
-    if scheduler is not None:
-        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-    else:
-        scheduler = None
+    # if scheduler is not None:
+    #     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    # else:
+    #     scheduler = None
     epoch = checkpoint['epoch']
     metrics = checkpoint['metric']
     return model, optimizer, scheduler, epoch, metrics

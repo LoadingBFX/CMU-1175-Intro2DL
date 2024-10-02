@@ -40,7 +40,7 @@ class CNNNetwork(torch.nn.Module):
         # self.cls_layer = torch.nn.Linear(1024, num_classes)
 
         # Load pre-trained ResNet-50 backbone
-        resnet = models.resnet50(weights=ResNet50_Weights.DEFAULT)
+        resnet = models.resnet50()
 
         # Remove the final fully connected layer from ResNet
         self.backbone = torch.nn.Sequential(*list(resnet.children())[:-1])  # Remove only the last FC layer
