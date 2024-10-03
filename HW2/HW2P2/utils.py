@@ -49,29 +49,40 @@ def get_ver_metrics(labels, scores, FPRs):
     }
 
 
-def save_model(model, optimizer, scheduler, metrics, epoch, path):
-    torch.save(
-    {'model_state_dict'         : model.state_dict(),
-         'optimizer_state_dict'     : optimizer.state_dict(),
-         'scheduler_state_dict'     : scheduler.state_dict(),
-         'metric'                   : metrics,
-         'epoch'                    : epoch},
-         path)
+def save_model(model, optimizer, schedulers, metrics, epoch, path):
+    # 如果调度器是元组，分别获取每个调度器的状态
+    if isinstance(schedulers, tuple):
+        scheduler_state_dicts = [scheduler.state_dict() for scheduler in schedulers]
+    else:
+        scheduler_state_dicts = [schedulers.state_dict()]
+
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dicts': scheduler_state_dicts,  # 保存调度器状态字典
+        'metric': metrics,
+        'epoch': epoch
+    }, path)
 
 
-def load_model(model, cfg, optimizer=None, scheduler=None, path='./checkpoint.pth'):
+def load_model(model, cfg, optimizer=None, schedulers=None, path='./checkpoint.pth'):
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
+
     if optimizer is not None:
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         for param_group in optimizer.param_groups:
             param_group['lr'] = cfg['optimizer']['lr']
     else:
         optimizer = None
-    # if scheduler is not None:
-    #     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-    # else:
-    #     scheduler = None
+
+    if schedulers is not None:
+        for i, scheduler in enumerate(schedulers):
+            scheduler.load_state_dict(checkpoint['scheduler_state_dicts'][i])  # 从保存的状态中加载每个调度器
+    else:
+        schedulers = None
+
     epoch = checkpoint['epoch']
     metrics = checkpoint['metric']
-    return model, optimizer, scheduler, epoch, metrics
+
+    return model, optimizer, schedulers, epoch, metrics
