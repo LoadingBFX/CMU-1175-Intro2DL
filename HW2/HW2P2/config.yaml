@@ -1,10 +1,7 @@
 # wandb
 wandb:
-  name: "early-submission"  # Optional, could be left empty for random name
-  reinit: true
+  name: "test"  # Optional, could be left empty for random name
   project: "hw2p2-ablations"
-  id: None  # 可以为 None，或者指定具体的 run_id 来恢复
-  resume: false  #
   wandb_api_key: "46b9373c96fe8f8327255e7da8a4046da7ffeef6"
 
 # folder path
@@ -15,22 +12,48 @@ test_pairs_file: './data/11-785-f24-hw2p2-verification/test_pairs.txt'
 checkpoint_dir: "./checkpoints"
 
 
-# Parameters
-batch_size: 1024
-epochs: 20
 
-# Optimizer parameters
+resume:
+  resume: false
+  id: '1727409915'
+
+
+# Parameters
+batch_size: 64
+epochs: 500
+e: 0
+use_mixed_loss: true
+
+# 损失函数配置
+loss:
+  cross_entropy:
+    smoothing: 0.1  # label smoothing for CrossEntropy
+    enabled: true   # 是否启用交叉熵损失
+  triplet:
+    margin: 1.0  # Triplet Loss margin
+    enabled: true   # 是否启用Triplet损失
+  arcface:
+    s: 64.0  # ArcFace scale parameter
+    m: 0.5   # ArcFace margin parameter
+    enabled: false  # 是否启用ArcFace损失
+
 optimizer:
   type: 'AdamW'  # 'AdamW' or 'SGD'
-  lr: 0.01
+  lr_feature_extraction: 0.001
+  lr_classification: 0.01
   weight_decay: 0.01
-  momentum: 0.9  # This is for SGD
 
 # Scheduler parameters
 scheduler:
-  type: 'CosineAnnealingLR'  # 'CosineAnnealingLR' or 'CosineAnnealingWarmRestarts'
-  T_max: 10  # For CosineAnnealingLR
+  feature:
+    type: 'CosineAnnealingLR'  # 'CosineAnnealingLR' or 'CosineAnnealingWarmRestarts'
+    T_max: 500  # For CosineAnnealingLR
+    eta_min: 1e-5  # 最小学习率
+  classifier:
+    type: 'CosineAnnealingLR'  # 'CosineAnnealingLR' or 'CosineAnnealingWarmRestarts'
+    T_max: 500  # For CosineAnnealingLR
+    eta_min: 1e-7  # 最小学习率
 
-  T_0: 10 # For CosineAnnealingWarmRestarts
+  T_0: 40 # For CosineAnnealingWarmRestarts
   T_mult: 2 # For CosineAnnealingWarmRestarts
-  eta_min: 1e-5 # For CosineAnnealingWarmRestarts
+

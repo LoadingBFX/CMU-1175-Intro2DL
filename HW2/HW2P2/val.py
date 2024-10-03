@@ -17,7 +17,7 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 def valid_epoch_cls(model, dataloader, criterion, device, config):
 
     model.eval()
-    batch_bar = tqdm(total=len(dataloader), dynamic_ncols=True, position=0, leave=False, desc='Val Cls.', ncols=5)
+    batch_bar = tqdm(total=len(dataloader), dynamic_ncols=True, position=0, leave=True, desc='Val Cls.', ncols=5)
 
     # metric meters
     loss_m = AverageMeter()
