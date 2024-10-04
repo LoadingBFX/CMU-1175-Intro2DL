@@ -1,14 +1,13 @@
 # DO NOT import any additional 3rd party external libraries as they will not
 # be available to AutoLab and are not needed (or allowed)​
 
-from flatten import *
 from Conv1d import *
 from linear import *
 from activation import *
 from loss import *
-import numpy as np
-import os
 import sys
+from flatten import *
+# from mytorch.flatten import Flatten
 
 sys.path.append('mytorch')
 
@@ -63,9 +62,24 @@ class CNN(object):
         # self.linear_layer         (Linear)      = Linear(???)
         # <---------------------
 
-        self.convolutional_layers = None
-        self.flatten = None
-        self.linear_layer = None
+        self.convolutional_layers = []
+        num_channels_extend = [num_input_channels] + num_channels
+        out_width = input_width
+        for idx, (num_in, num_out) in enumerate(zip(num_channels_extend, num_channels_extend[1:])):
+            self.convolutional_layers.append(
+                Conv1d(
+                    in_channels=num_in,
+                    out_channels=num_out,
+                    kernel_size=kernel_sizes[idx],
+                    stride=strides[idx],
+                    weight_init_fn=conv_weight_init_fn,
+                    bias_init_fn=bias_init_fn
+                )
+            )
+            out_width = (out_width - kernel_sizes[idx]) // strides[idx] + 1
+        self.flatten = Flatten()
+        self.linear_layer = Linear(in_features=out_width*num_channels[-1], out_features=num_linear_neurons)
+
 
     def forward(self, A):
         """
@@ -81,6 +95,12 @@ class CNN(object):
 
         # Save output (necessary for error and loss)
         self.Z = A
+
+        for conv, activation in zip(self.convolutional_layers, self.activations):
+            self.Z = conv.forward(self.Z)
+            self.Z = activation.forward(self.Z)
+        self.Z = self.flatten.forward(self.Z)
+        self.Z = self.linear_layer.forward(self.Z)
 
         return self.Z
 
@@ -99,6 +119,11 @@ class CNN(object):
         # Your code goes here -->
         # Iterate through each layer in reverse order
         # <---------------------
+        grad = self.linear_layer.backward(grad)
+        grad = self.flatten.backward(grad)
+        for conv, activation in zip(reversed(self.convolutional_layers), reversed(self.activations)):
+            grad = activation.backward(grad)
+            grad = conv.backward(grad)
 
         return grad
 

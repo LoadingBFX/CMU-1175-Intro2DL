@@ -278,7 +278,6 @@ def create_dataloader(cfg):
 
 
 
-
 def train_and_val(model, optimizer, scheduler, scaler, train_loader, val_loader, pair_loader, config, DEVICE, run):
     e = config['e']
     best_valid_cls_acc = 0.0
