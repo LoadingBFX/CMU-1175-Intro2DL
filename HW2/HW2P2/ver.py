@@ -30,7 +30,7 @@ def valid_epoch_ver(model, pair_data_loader, device, config):
     model.eval()
     scores = []
     match_labels = []
-    batch_bar = tqdm(total=len(pair_data_loader), dynamic_ncols=True, position=0, leave=True, desc='Val Veri.')
+    batch_bar = tqdm(total=len(pair_data_loader), dynamic_ncols=True, position=0, leave=False, desc='Val Veri.')
     for i, (images1, images2, labels) in enumerate(pair_data_loader):
 
         # match_labels = match_labels.to(device)
