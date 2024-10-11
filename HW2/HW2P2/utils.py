@@ -101,7 +101,7 @@ def load_model(model, cfg, optimizer=None, schedulers=None, path='./checkpoint.p
     #         schedulers.load_state_dict(checkpoint['scheduler_state_dict'])
 
     epoch = checkpoint['epoch']
-    metrics = checkpoint['metric']
+    metrics = checkpoint['metrics']
 
     print(f"Checkpoint loaded. Last epoch: {epoch}, Metrics: {metrics}")
 

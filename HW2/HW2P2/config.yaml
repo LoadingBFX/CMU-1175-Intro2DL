@@ -1,6 +1,6 @@
 # wandb
 wandb:
-  name: "res50_112_ce"  # Optional, could be left empty for random name
+#  name: "res50_112_ce"  # Optional, could be left empty for random name
   project: "hw2p2-crop"
   wandb_api_key: "46b9373c96fe8f8327255e7da8a4046da7ffeef6"
 
@@ -14,14 +14,17 @@ checkpoint_dir: "./checkpoints"
 
 
 resume:
-  resume: false
+  resume: true
   id: '1727761635'
 
 
 # Parameters
-batch_size: 64
-epochs: 100
+batch_size: 512
+epochs: 50
 e: 0
+
+model:
+  type: "ResNet18" # ResNet50 ResNet18 SENet ConvNext
 
 # 损失函数配置
 loss:
@@ -45,7 +48,7 @@ loss:
 use_mixed_loss: false
 optimizer:
   type: 'AdamW'  # 'AdamW' or 'SGD'
-  lr: 0.01
+  lr: 1e-3
   lr_feature_extraction: 0.001
   lr_classification: 0.0001
   weight_decay: 0.01
@@ -67,7 +70,7 @@ scheduler:
     T_mult: 2 # For CosineAnnealingWarmRestarts
 
   type: 'CosineAnnealingLR'  # 'CosineAnnealingLR' or 'CosineAnnealingWarmRestarts'
-  T_max: 100  # For CosineAnnealingLR
+  T_max: 50  # For CosineAnnealingLR
   eta_min: 0  # 最小学习率
   T_0: 10 # For CosineAnnealingWarmRestarts
   T_mult: 2 # For CosineAnnealingWarmRestarts

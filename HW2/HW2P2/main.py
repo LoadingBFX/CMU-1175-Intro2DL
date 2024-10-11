@@ -21,6 +21,7 @@ from dataset.TestImagePairDataset import TestImagePairDataset
 from dataset.TripletImageDataset import TripletImageDataset
 from loss.Triplet import TripletLoss
 from model.ConvNext import ConvNext
+from model.ResNet18 import ResNet18
 from model.model import CNNNetwork
 from model.senet import SENetwork
 from test import test_epoch_ver
@@ -240,32 +241,46 @@ def create_dataloader(cfg):
     #     torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
     #                                      std=[0.5, 0.5, 0.5])])
 
+    # train_transforms = torchvision.transforms.Compose([
+    #     torchvision.transforms.Resize(112),
+    #     torchvision.transforms.RandomHorizontalFlip(0.5),
+    #     torchvision.transforms.ColorJitter(brightness=0.16, contrast=0.15, saturation=0.1),
+    #     torchvision.transforms.RandomRotation(20),
+    #     torchvision.transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+    #     torchvision.transforms.RandomPerspective(distortion_scale=0.2, p=0.2),
+    #     torchvision.transforms.ToTensor(),
+    #     torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
+    #                                      std=[0.5, 0.5, 0.5]),
+    #
+    #     torchvision.transforms.RandomErasing(p=0.3, scale=(0.05, 0.1)),
+    # ])
+
     train_transforms = torchvision.transforms.Compose([
         torchvision.transforms.Resize(112),
         torchvision.transforms.RandomHorizontalFlip(0.5),
         torchvision.transforms.ColorJitter(brightness=0.16, contrast=0.15, saturation=0.1),
-        torchvision.transforms.RandomRotation(20),
+        torchvision.transforms.RandomRotation(30),
         torchvision.transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
         torchvision.transforms.RandomPerspective(distortion_scale=0.2, p=0.2),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                         std=[0.5, 0.5, 0.5]),
+        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225]),
 
-        torchvision.transforms.RandomErasing(p=0.3, scale=(0.05, 0.1)),
+        torchvision.transforms.RandomErasing(p=0.3, scale=(0.1, 0.2)),
     ])
 
     # val transforms
     val_transforms = torchvision.transforms.Compose([
         torchvision.transforms.Resize(112),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                         std=[0.5, 0.5, 0.5])])
+        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225]),])
 
     ver_transforms = torchvision.transforms.Compose([
         torchvision.transforms.CenterCrop(112),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                         std=[0.5, 0.5, 0.5])])
+        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225]),])
 
     # # val transforms
     # val_transforms = torchvision.transforms.Compose([
@@ -463,6 +478,12 @@ def train_and_val(model, optimizer, scheduler, scaler, train_loader, val_loader,
         if run is not None:
             run.log(metrics)
 
+def val(model, optimizer, scheduler, scaler, train_loader, val_loader, pair_loader, config, DEVICE, run):
+    # 检索验证
+    valid_ret_acc, valid_ret_eer = valid_epoch_ver(model, pair_loader, DEVICE, config)
+    tqdm.write("\nVal Ret. Acc {:.04f}% \t Val Ret. EER {:.04f}%".format(valid_ret_acc, valid_ret_eer))
+
+
 
 def setup_wandb(model, cfg):
     wandb_config = cfg['wandb']
@@ -495,9 +516,46 @@ def main():
 
     # Initialize model
     print("==Create Model==")
-    model = CNNNetwork().to(DEVICE)
-    # model = SENetwork().to(DEVICE)
-    # model = ConvNext().to(DEVICE)
+    if config['model']['type'] == 'ResNet50':
+        model = CNNNetwork().to(DEVICE)
+    elif config['model']['type'] == 'ResNet18':
+        model = ResNet18().to(DEVICE)
+    elif config['model']['type'] == 'SENet':
+        model = SENetwork().to(DEVICE)
+    elif config['model']['type'] == 'ConvNext':
+        model = ConvNext().to(DEVICE)
+
+    # 拼接 wandb name
+    enabled_losses = []
+    if config['loss']['cross_entropy']['enabled']:
+        enabled_losses.append('CE')
+    if config['loss']['triplet']['enabled']:
+        enabled_losses.append('Triplet')
+    if config['loss']['arcface']['enabled']:
+        enabled_losses.append('ArcFace')
+
+    loss_str = '_'.join(enabled_losses) if enabled_losses else 'None'
+
+    # 根据 use_mixed_loss 判断优化器和调度器
+    if config['use_mixed_loss']:
+        # Mixed loss 情况下，拼接特征提取和分类的学习率和调度器
+        lr_feature_extraction = config['optimizer']['lr_feature_extraction']
+        lr_classification = config['optimizer']['lr_classification']
+
+        feature_scheduler = config['scheduler']['feature']['T_max']
+        classifier_scheduler = config['scheduler']['classifier']['T_max']
+
+        config['wandb'][
+            'name'] = f"{config['model']['type']}_{loss_str}_lrF{lr_feature_extraction}_lrC{lr_classification}_schF{feature_scheduler}_schC{classifier_scheduler}_bs{config['batch_size']}"
+    else:
+        # 非 mixed loss 情况下，拼接统一的学习率和调度器
+        lr = config['optimizer']['lr']
+        scheduler_type = config['scheduler']['T_max']
+
+        config['wandb'][
+            'name'] = f"{config['model']['type']}_{loss_str}_lr{lr}_sch{scheduler_type}_bs{config['batch_size']}"
+
+
     run = setup_wandb(model, config)
 
     # 初始化优化器和学习率调度器
@@ -532,6 +590,7 @@ def main():
     train_and_val(model, optimizer, scheduler, scaler, train_loader, val_loader,
                   pair_loader, config, DEVICE,
                   run)
+    # val(model, optimizer, scheduler, scaler, train_loader, val_loader, pair_loader, config, DEVICE, run)
 
 
     scores = test_epoch_ver(model, test_pair_loader, config)

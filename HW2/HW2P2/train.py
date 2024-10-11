@@ -45,6 +45,7 @@ def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, d
             loss = criterion(outputs['out'], labels)
 
         scaler.scale(loss).backward() # This is a replacement for loss.backward()
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         scaler.step(optimizer) # This is a replacement for optimizer.step()
         scaler.update()
         # metrics
