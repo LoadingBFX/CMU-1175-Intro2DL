@@ -172,11 +172,11 @@ def initialize_optimizer_scheduler(model, config):
         # ], weight_decay=config['optimizer']['weight_decay'])
 
         optimizer_feature = torch.optim.AdamW(model.get_feature_extractor_params(),
-                                              lr=config['optimizer']['lr_feature_extraction'],
-                                              weight_decay=config['optimizer']['weight_decay'])  # 为 ArcFace 部分
+                                              lr=float(config['optimizer']['lr_feature_extraction']),
+                                              weight_decay=float(config['optimizer']['weight_decay']))  # 为 ArcFace 部分
         optimizer_classifier = torch.optim.AdamW(model.get_classifier_params(),
-                                                 lr=config['optimizer']['lr_classification'],
-                                                 weight_decay=config['optimizer']['weight_decay'])  # 为分类部
+                                                 lr=float(config['optimizer']['lr_classification']),
+                                                 weight_decay=float(config['optimizer']['weight_decay']))  # 为分类部
 
         scheduler_feature = get_scheduler(optimizer_feature, config['scheduler']['feature'])
         scheduler_classifier = get_scheduler(optimizer_classifier, config['scheduler']['classifier'])
@@ -197,8 +197,8 @@ def initialize_optimizer_scheduler(model, config):
         optimizer_config = config['optimizer']
 
         optimizer_type = optimizer_config.get('type')
-        lr = optimizer_config.get('lr')
-        weight_decay = optimizer_config.get('weight_decay', 0)
+        lr = float(optimizer_config.get('lr'))
+        weight_decay = float(optimizer_config.get('weight_decay', 0))
 
         if optimizer_type == 'AdamW':
             optimizer = torch.optim.AdamW(
@@ -257,43 +257,43 @@ def create_dataloader(cfg):
 
     train_transforms = torchvision.transforms.Compose([
         torchvision.transforms.Resize(112),
-        torchvision.transforms.RandomHorizontalFlip(0.5),
-        torchvision.transforms.ColorJitter(brightness=0.16, contrast=0.15, saturation=0.1),
-        torchvision.transforms.RandomRotation(30),
-        torchvision.transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
-        torchvision.transforms.RandomPerspective(distortion_scale=0.2, p=0.2),
+        # torchvision.transforms.RandomHorizontalFlip(0.5),
+        # torchvision.transforms.ColorJitter(brightness=0.16, contrast=0.15, saturation=0.1),
+        torchvision.transforms.RandomRotation(18),
+        # torchvision.transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+        # torchvision.transforms.RandomPerspective(distortion_scale=0.2, p=0.2),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225]),
 
-        torchvision.transforms.RandomErasing(p=0.3, scale=(0.1, 0.2)),
+        # torchvision.transforms.RandomErasing(p=0.3, scale=(0.1, 0.2)),
     ])
 
     # val transforms
-    val_transforms = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(112),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225]),])
-
-    ver_transforms = torchvision.transforms.Compose([
-        torchvision.transforms.CenterCrop(112),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225]),])
-
-    # # val transforms
     # val_transforms = torchvision.transforms.Compose([
     #     torchvision.transforms.Resize(112),
     #     torchvision.transforms.ToTensor(),
     #     torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                                      std=[0.229, 0.224, 0.225])])
+    #                                      std=[0.229, 0.224, 0.225]),])
     #
     # ver_transforms = torchvision.transforms.Compose([
     #     torchvision.transforms.CenterCrop(112),
     #     torchvision.transforms.ToTensor(),
-    # torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                                  std=[0.229, 0.224, 0.225])])
+    #     torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                                      std=[0.229, 0.224, 0.225]),])
+
+    # # val transforms
+    val_transforms = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(112),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])])
+
+    ver_transforms = torchvision.transforms.Compose([
+        torchvision.transforms.CenterCrop(112),
+        torchvision.transforms.ToTensor(),
+    torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])])
 
 
     # # val transforms

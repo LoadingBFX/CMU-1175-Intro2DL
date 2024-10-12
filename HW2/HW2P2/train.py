@@ -11,10 +11,72 @@ from tqdm import tqdm
 from loss.Triplet import TripletLoss
 from metrics.AverageMeter import AverageMeter
 from utils import accuracy
+import torch.nn.functional as F
 
 
+#
+# def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, device, config):
+#
+#     model.train()
+#
+#     # metric meters
+#     loss_m = AverageMeter()
+#     acc_m = AverageMeter()
+#
+#     # Progress Bar
+#     batch_bar = tqdm(total=len(dataloader), dynamic_ncols=True, leave=True, position=0, desc='Train', ncols=5)
+#
+#     for i, (images, labels) in enumerate(dataloader):
+#
+#         optimizer.zero_grad() # Zero gradients
+#
+#         # send to cuda
+#         images = images.to(device, non_blocking=True)
+#         if isinstance(labels, (tuple, list)):
+#             targets1, targets2, lam = labels
+#             labels = (targets1.to(device), targets2.to(device), lam)
+#         else:
+#             labels = labels.to(device, non_blocking=True)
+#
+#         # forward
+#         with torch.cuda.amp.autocast():  # This implements mixed precision. Thats it!
+#             outputs = model(images)
+#
+#             # Use the type of output depending on the loss function you want to use
+#             loss = criterion(outputs['out'], labels)
+#
+#         scaler.scale(loss).backward() # This is a replacement for loss.backward()
+#         # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+#         scaler.step(optimizer) # This is a replacement for optimizer.step()
+#         scaler.update()
+#         # metrics
+#         loss_m.update(loss.item())
+#         if 'feats' in outputs:
+#             acc = accuracy(outputs['out'], labels)[0].item()
+#         else:
+#             acc = 0.0
+#         acc_m.update(acc)
+#
+#         # tqdm lets you add some details so you can monitor training as you train.
+#         batch_bar.set_postfix(
+#             # acc         = "{:.04f}%".format(100*accuracy),
+#             acc="{:.04f}% ({:.04f})".format(acc, acc_m.avg),
+#             loss        = "{:.04f} ({:.04f})".format(loss.item(), loss_m.avg),
+#             lr          = "{:.04f}".format(float(optimizer.param_groups[0]['lr'])))
+#
+#         batch_bar.update() # Update tqdm bar
+#
+#     # You may want to call some schedulers inside the train function. What are these?
+#     if lr_scheduler is not None:
+#         lr_scheduler.step()
+#
+#     batch_bar.close()
+#
+#     return acc_m.avg, loss_m.avg
 
-def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, device, config):
+
+# R - Drop
+def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, device, config, lambda_rdrop=0.5):
 
     model.train()
 
@@ -27,7 +89,7 @@ def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, d
 
     for i, (images, labels) in enumerate(dataloader):
 
-        optimizer.zero_grad() # Zero gradients
+        optimizer.zero_grad()  # Zero gradients
 
         # send to cuda
         images = images.to(device, non_blocking=True)
@@ -38,40 +100,51 @@ def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, d
             labels = labels.to(device, non_blocking=True)
 
         # forward
-        with torch.cuda.amp.autocast():  # This implements mixed precision. Thats it!
-            outputs = model(images)
+        with torch.cuda.amp.autocast():  # This implements mixed precision. That's it!
+            # First forward pass
+            outputs1 = model(images)
+            # Second forward pass for R-Drop
+            outputs2 = model(images)
 
-            # Use the type of output depending on the loss function you want to use
-            loss = criterion(outputs['out'], labels)
+            # Compute the original loss using the criterion
+            loss = criterion(outputs1['out'], labels)
 
-        scaler.scale(loss).backward() # This is a replacement for loss.backward()
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        scaler.step(optimizer) # This is a replacement for optimizer.step()
+            # Compute the KL divergence between the two outputs
+            kl_loss = F.kl_div(F.log_softmax(outputs1['out'], dim=-1), F.softmax(outputs2['out'], dim=-1), reduction='batchmean')
+            kl_loss += F.kl_div(F.log_softmax(outputs2['out'], dim=-1), F.softmax(outputs1['out'], dim=-1), reduction='batchmean')
+
+            # Combine original loss and R-Drop loss
+            total_loss = loss + kl_loss * lambda_rdrop
+
+        # Backpropagation and optimization
+        scaler.scale(total_loss).backward()
+        scaler.step(optimizer)
         scaler.update()
-        # metrics
-        loss_m.update(loss.item())
-        if 'feats' in outputs:
-            acc = accuracy(outputs['out'], labels)[0].item()
+
+        # Metrics
+        loss_m.update(total_loss.item())
+        if 'feats' in outputs1:
+            acc = accuracy(outputs1['out'], labels)[0].item()
         else:
             acc = 0.0
         acc_m.update(acc)
 
-        # tqdm lets you add some details so you can monitor training as you train.
+        # Update tqdm bar
         batch_bar.set_postfix(
-            # acc         = "{:.04f}%".format(100*accuracy),
             acc="{:.04f}% ({:.04f})".format(acc, acc_m.avg),
-            loss        = "{:.04f} ({:.04f})".format(loss.item(), loss_m.avg),
-            lr          = "{:.04f}".format(float(optimizer.param_groups[0]['lr'])))
+            loss="{:.04f} ({:.04f})".format(total_loss.item(), loss_m.avg),
+            lr="{:.04f}".format(float(optimizer.param_groups[0]['lr'])))
 
-        batch_bar.update() # Update tqdm bar
+        batch_bar.update()
 
-    # You may want to call some schedulers inside the train function. What are these?
+    # Learning rate scheduling
     if lr_scheduler is not None:
         lr_scheduler.step()
 
     batch_bar.close()
 
     return acc_m.avg, loss_m.avg
+
 
 
 def train_epoch_triplet(model, dataloader, criterion_ce, criterion_triplet, optimizer, lr_schedulers, scaler, device, config):
