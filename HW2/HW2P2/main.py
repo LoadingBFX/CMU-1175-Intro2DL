@@ -4,6 +4,7 @@
 # @Author  : Loading
 import time
 
+import numpy as np
 import torch
 import torchvision
 from tqdm import tqdm
@@ -19,9 +20,11 @@ from dataset.ImagePairDataset import ImagePairDataset
 from dataset.TestImagePairDataset import TestImagePairDataset
 
 from dataset.TripletImageDataset import TripletImageDataset
+from dataset.facealign import FaceAlign
 from loss.Triplet import TripletLoss
 from model.ConvNext import ConvNext
 from model.ResNet18 import ResNet18
+from model.ResNet50 import CustomResNet50
 from model.model import CNNNetwork
 from model.senet import SENetwork
 from test import test_epoch_ver
@@ -31,6 +34,9 @@ from val import valid_epoch_cls
 from ver import valid_epoch_ver
 import yaml
 from pytorch_metric_learning import losses
+import cv2
+from PIL import Image
+
 
 # import random
 # import numpy as np
@@ -44,7 +50,13 @@ from pytorch_metric_learning import losses
 #     torch.backends.cudnn.deterministic = True  # 保证每次返回的卷积算法是确定的
 #     torch.backends.cudnn.benchmark = False     # 保证实验可复现
 
-
+def gaussian_blur(image):
+    # 将PIL图像转换为numpy数组
+    img_np = np.array(image)
+    # 使用OpenCV进行高斯滤波
+    img_np = cv2.GaussianBlur(img_np, (5, 5), 0)
+    # 将图像转换回PIL格式
+    return Image.fromarray(img_np)
 
 
 def load_config(config_file):
@@ -123,7 +135,7 @@ def initialize_criterion(config):
                                                        swap=config['loss']['triplet']['swap'])
 
     if config['loss']['arcface']['enabled']:
-        criterion_arcface = losses.ArcFaceLoss(num_classes=8631, embedding_size=2048,
+        criterion_arcface = losses.ArcFaceLoss(num_classes=8631, embedding_size=512,
                                                margin=config['loss']['arcface']['m'],
                                                scale=config['loss']['arcface']['s'])  # 假设你已经实现了ArcFace损失
 
@@ -214,6 +226,12 @@ def initialize_optimizer_scheduler(model, config):
                 momentum=momentum,
                 weight_decay=weight_decay
             )
+        elif optimizer_type == 'Adam':  # 添加对 Adam 优化器的支持
+            optimizer = torch.optim.Adam(
+                model.parameters(),
+                lr=lr,
+                weight_decay=weight_decay
+            )
         else:
             raise ValueError(f"Unsupported optimizer type: '{optimizer_type}'. Supported types: 'AdamW', 'SGD'.")
 
@@ -256,12 +274,17 @@ def create_dataloader(cfg):
     # ])
 
     train_transforms = torchvision.transforms.Compose([
+
+        torchvision.transforms.RandomHorizontalFlip(0.5),
+        torchvision.transforms.ColorJitter(brightness=0.16, contrast=0.15, saturation=0.1),
+        # torchvision.transforms.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05),
+        torchvision.transforms.RandomRotation(20),
+        torchvision.transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+        # torchvision.transforms.Grayscale(num_output_channels=3),
+        # torchvision.transforms.Lambda(gaussian_blur),
+
+        torchvision.transforms.RandomPerspective(distortion_scale=0.2, p=0.2),
         torchvision.transforms.Resize(112),
-        # torchvision.transforms.RandomHorizontalFlip(0.5),
-        # torchvision.transforms.ColorJitter(brightness=0.16, contrast=0.15, saturation=0.1),
-        torchvision.transforms.RandomRotation(18),
-        # torchvision.transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
-        # torchvision.transforms.RandomPerspective(distortion_scale=0.2, p=0.2),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225]),
@@ -270,30 +293,43 @@ def create_dataloader(cfg):
     ])
 
     # val transforms
-    # val_transforms = torchvision.transforms.Compose([
-    #     torchvision.transforms.Resize(112),
-    #     torchvision.transforms.ToTensor(),
-    #     torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                                      std=[0.229, 0.224, 0.225]),])
-    #
-    # ver_transforms = torchvision.transforms.Compose([
-    #     torchvision.transforms.CenterCrop(112),
-    #     torchvision.transforms.ToTensor(),
-    #     torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                                      std=[0.229, 0.224, 0.225]),])
-
-    # # val transforms
     val_transforms = torchvision.transforms.Compose([
         torchvision.transforms.Resize(112),
+        # torchvision.transforms.Lambda(gaussian_blur),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225])])
+                                         std=[0.229, 0.224, 0.225]),])
 
     ver_transforms = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(205),
         torchvision.transforms.CenterCrop(112),
+        # torchvision.transforms.Lambda(gaussian_blur),
         torchvision.transforms.ToTensor(),
-    torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])])
+        # torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+        #                                  std=[0.229, 0.224, 0.225]),
+        torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                         std=[0.5, 0.5, 0.5]),
+
+    ])
+
+    # # val transforms
+    # val_transforms = torchvision.transforms.Compose([
+    #     torchvision.transforms.Resize(112),
+    #     # torchvision.transforms.Grayscale(num_output_channels=3),
+    #     # torchvision.transforms.Lambda(gaussian_blur),
+    #     torchvision.transforms.ToTensor(),
+    #     torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                                      std=[0.229, 0.224, 0.225])])
+    #
+    # ver_transforms = torchvision.transforms.Compose([
+    #     # torchvision.transforms.Resize(240),
+    #     torchvision.transforms.CenterCrop(224),
+    #     # FaceAlign(),
+    #     # torchvision.transforms.Grayscale(num_output_channels=3),
+    #     # torchvision.transforms.Lambda(gaussian_blur),
+    #     torchvision.transforms.ToTensor(),
+    # torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                                  std=[0.229, 0.224, 0.225])])
 
 
     # # val transforms
@@ -360,6 +396,9 @@ def train_and_val(model, optimizer, scheduler, scaler, train_loader, val_loader,
     eval_cls = True
     best_valid_ret_acc = 0.0
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=config['loss']['cross_entropy']['smoothing'])
+    config['arcface_loss'] = losses.ArcFaceLoss(num_classes=8631, embedding_size=512,
+                                               margin=config['loss']['arcface']['m'],
+                                               scale=config['loss']['arcface']['s'])
 
     criterion_ce, criterion_triplet, criterion_arcface = initialize_criterion(config)
     # 获取启用的损失函数列表
@@ -374,7 +413,7 @@ def train_and_val(model, optimizer, scheduler, scaler, train_loader, val_loader,
         if epoch < 1000:
             # 动态调整loss比例
             config['loss']['triplet']['alpha'] = 0.001
-            config['loss']['arcface']['alpha'] =  0.001
+            config['loss']['arcface']['alpha'] =  0
         else:
             # 动态调整loss比例
             config['loss']['triplet']['alpha'] = initial_triplet_alpha * ((epoch + 1) / config['epochs'])
@@ -517,7 +556,7 @@ def main():
     # Initialize model
     print("==Create Model==")
     if config['model']['type'] == 'ResNet50':
-        model = CNNNetwork().to(DEVICE)
+        model = CustomResNet50().to(DEVICE)
     elif config['model']['type'] == 'ResNet18':
         model = ResNet18().to(DEVICE)
     elif config['model']['type'] == 'SENet':
@@ -587,10 +626,10 @@ def main():
     torch.cuda.empty_cache()
 
     ## Experiments
-    train_and_val(model, optimizer, scheduler, scaler, train_loader, val_loader,
-                  pair_loader, config, DEVICE,
-                  run)
-    # val(model, optimizer, scheduler, scaler, train_loader, val_loader, pair_loader, config, DEVICE, run)
+    # train_and_val(model, optimizer, scheduler, scaler, train_loader, val_loader,
+    #               pair_loader, config, DEVICE,
+    #               run)
+    val(model, optimizer, scheduler, scaler, train_loader, val_loader, pair_loader, config, DEVICE, run)
 
 
     scores = test_epoch_ver(model, test_pair_loader, config)

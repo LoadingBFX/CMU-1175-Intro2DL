@@ -19,12 +19,12 @@ resume:
 
 
 # Parameters
-batch_size: 512
+batch_size: 64
 epochs: 50
 e: 0
 
 model:
-  type: "ResNet18" # ResNet50 ResNet18 SENet ConvNext
+  type: "ResNet50" # ResNet50 ResNet18 SENet ConvNext
 
 # 损失函数配置
 loss:
@@ -40,18 +40,18 @@ loss:
   arcface:
     s: 64.0  # ArcFace scale parameter
     m: 28.6   # ArcFace margin parameter
-    alpha: 0.8
+    alpha: 0.5
     beta: 1
     enabled: false  # 是否启用ArcFace损失
 
 
 use_mixed_loss: false
 optimizer:
-  type: 'AdamW'  # 'AdamW' or 'SGD'
+  type: 'Adam'  # 'AdamW' or 'SGD' Adam
   lr: 1e-3
   lr_feature_extraction: 0.001
   lr_classification: 0.0001
-  weight_decay: 0.01
+  weight_decay: 0.0001
 
 # Scheduler parameters
 scheduler:
@@ -71,7 +71,7 @@ scheduler:
 
   type: 'CosineAnnealingLR'  # 'CosineAnnealingLR' or 'CosineAnnealingWarmRestarts'
   T_max: 50  # For CosineAnnealingLR
-  eta_min: 0  # 最小学习率
+  eta_min: 1e-9  # 最小学习率
   T_0: 10 # For CosineAnnealingWarmRestarts
   T_mult: 2 # For CosineAnnealingWarmRestarts
 

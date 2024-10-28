@@ -76,13 +76,14 @@ import torch.nn.functional as F
 
 
 # R - Drop
-def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, device, config, lambda_rdrop=0.5):
+def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, device, config, lambda_rdrop=0.2):
 
     model.train()
 
     # metric meters
     loss_m = AverageMeter()
     acc_m = AverageMeter()
+    arcface_criterion = config['arcface_loss']
 
     # Progress Bar
     batch_bar = tqdm(total=len(dataloader), dynamic_ncols=True, leave=True, position=0, desc='Train', ncols=5)
@@ -108,13 +109,14 @@ def train_epoch(model, dataloader, criterion, optimizer, lr_scheduler, scaler, d
 
             # Compute the original loss using the criterion
             loss = criterion(outputs1['out'], labels)
+            arcface_loss = arcface_criterion(outputs1['feats'], labels)
 
             # Compute the KL divergence between the two outputs
             kl_loss = F.kl_div(F.log_softmax(outputs1['out'], dim=-1), F.softmax(outputs2['out'], dim=-1), reduction='batchmean')
             kl_loss += F.kl_div(F.log_softmax(outputs2['out'], dim=-1), F.softmax(outputs1['out'], dim=-1), reduction='batchmean')
 
             # Combine original loss and R-Drop loss
-            total_loss = loss + kl_loss * lambda_rdrop
+            total_loss = loss + kl_loss * lambda_rdrop + arcface_loss * 0.5
 
         # Backpropagation and optimization
         scaler.scale(total_loss).backward()
@@ -280,6 +282,18 @@ def train_epoch_arcface(model, dataloader, criterion_ce, criterion_arcface, opti
         # Forward pass
         with torch.cuda.amp.autocast():
             outputs = model(images)
+
+            # # First forward pass
+            # outputs1 = model(images)
+            # # Second forward pass for R-Drop
+            # outputs2 = model(images)
+            #
+            # # Compute the KL divergence between the two outputs
+            # kl_loss = F.kl_div(F.log_softmax(outputs1['out'], dim=-1), F.softmax(outputs2['out'], dim=-1),
+            #                    reduction='batchmean')
+            # kl_loss += F.kl_div(F.log_softmax(outputs2['out'], dim=-1), F.softmax(outputs1['out'], dim=-1),
+            #                     reduction='batchmean')
+
 
             arcface_loss = criterion_arcface(outputs['feats'], labels)
 
