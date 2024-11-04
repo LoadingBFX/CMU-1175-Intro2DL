@@ -1,0 +1,14 @@
+data_folder: './11785-f24-hw3p2/'
+save_model_folder: './ckpt/'
+
+
+train:
+  beam_width: 1
+  lr: 0.002
+  epochs: 50
+  batch_size: 64
+  save_interval: 10
+
+# You may pass this as a parameter to the dataset class above
+# This will help modularize your implementation
+transforms: []  # Set of transformations
