@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # @Time    : 11/6/2024 7:45 PM
 # @Author  : Loading
+import os
+
 import torch
 import pandas as pd
 from tqdm import tqdm
@@ -36,15 +38,19 @@ LABELS = ARPAbet[:-2]
 
 TEST_BEAM_WIDTH = 100
 
+
 def main():
     set_seed(42)
     cfg = load_config("./config/config.yaml")
-    # Load the model
+    best_model_path = os.path.join(cfg['save_model_folder'], 'best_model.pth')
+
+    torch.cuda.empty_cache()
     model = ASRModel(
-        input_size=28,
-        embed_size=512,
+        input_size=cfg['model']['input_size'],
+        embed_size=cfg['model']['embed_size'],
         output_size=len(PHONEMES)
     ).to(DEVICE)
+
     loaded = load_model(MODEL_PATH, model) # [model, optimizer, scheduler, epoch, metric]
     model = loaded[0]
     model.eval()

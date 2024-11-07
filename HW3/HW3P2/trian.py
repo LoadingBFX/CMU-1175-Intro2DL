@@ -76,20 +76,18 @@ def main():
 
     wandb.login(key="46b9373c96fe8f8327255e7da8a4046da7ffeef6")
     run = wandb.init(
-        name="early-submission",  ## Wandb creates random run names if you skip this field
+        name=f"{cfg['train']['epochs']}ep_{cfg['model']['input_size']}in_{cfg['model']['embed_size']}em_{cfg['specaug']['freq_mask_param']}fmp_{cfg['specaug']['time_mask_param']}tmp_{cfg['decode']['beam_width']}bw_{cfg['encoder']['kernel_size']}ks_{cfg['pBLSTMs']['dropout_prob']}pblstm_{cfg['decoder']['dropout_prob']}ddp",
         project="hw3p2-ablations",  ### Project should be created in your wandb account
         config=cfg  ### Wandb Config for your run
     )
 
 
-    audio_transforms = nn.Sequential(
-        PermuteBlock(),
-        torchaudio.transforms.FrequencyMasking(freq_mask_param= cfg['specaug']["freq_mask_param"]),
-        torchaudio.transforms.TimeMasking(time_mask_param=cfg['specaug']["time_mask_param"]),
-        PermuteBlock()
-    )
-    # audio_transforms = None
-
+    # audio_transforms = nn.Sequential(
+    #     PermuteBlock(),
+    #     torchaudio.transforms.FrequencyMasking(freq_mask_param= cfg['specaug']["freq_mask_param"]),
+    #     torchaudio.transforms.TimeMasking(time_mask_param=cfg['specaug']["time_mask_param"]),
+    #     PermuteBlock()
+    # )
 
     last_epoch_completed = 0
     start = last_epoch_completed
@@ -150,6 +148,7 @@ def main():
 
     torch.cuda.empty_cache()
     model = ASRModel(
+        cfg=cfg,
         input_size=cfg['model']['input_size'],
         embed_size=cfg['model']['embed_size'],
         output_size=len(PHONEMES)
@@ -216,7 +215,9 @@ def main():
             print("Saved best model")
           # You may find it interesting to exlplore Wandb Artifcats to version your models
     run.finish()
-    TEST_BEAM_WIDTH = 40
+
+
+    TEST_BEAM_WIDTH = 41
 
     test_decoder = CTCBeamDecoder(LABELS, beam_width=TEST_BEAM_WIDTH, log_probs_input=True)
     results = []

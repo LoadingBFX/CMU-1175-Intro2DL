@@ -12,23 +12,24 @@ from model.permute_block import PermuteBlock
 
 class ASRModel(torch.nn.Module):
 
-    def __init__(self, input_size, embed_size=192, output_size=41):
+    def __init__(self, input_size, embed_size=192, output_size=41, cfg=None):
         super().__init__()
+        if cfg is not None:
+            self.augmentations = torch.nn.Sequential(
+                PermuteBlock(),
+                torchaudio.transforms.FrequencyMasking(freq_mask_param=cfg['specaug']["freq_mask_param"]),
+                torchaudio.transforms.TimeMasking(time_mask_param=cfg['specaug']["time_mask_param"]),
+                PermuteBlock(),
+            )
+            print("Using SpecAugment")
+            print(cfg['specaug'])
 
-        # self.augmentations = torch.nn.Sequential(
-        #     PermuteBlock(),
-        #     torchaudio.transforms.FrequencyMasking(freq_mask_param=10),
-        #     torchaudio.transforms.TimeMasking(time_mask_param=100),
-        #     # torchaudio.transforms.TimeStretch(fixed_rate=0.9), # Time Stretch
-        #     PermuteBlock(),
-        # )
-
-        self.encoder = Encoder(input_size, embed_size)
-        self.decoder = Decoder(embed_size * 2, output_size)
+        self.encoder = Encoder(input_size, embed_size, cfg)
+        self.decoder = Decoder(embed_size * 2, output_size, cfg)
 
     def forward(self, x, lengths_x):
-        # if self.training:
-        #     x = self.augmentations(x)
+        if self.training and hasattr(self, 'augmentations'):
+            x = self.augmentations(x)
 
         encoder_out, encoder_lens = self.encoder(x, lengths_x)
         decoder_out = self.decoder(encoder_out)

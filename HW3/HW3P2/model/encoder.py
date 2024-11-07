@@ -28,16 +28,18 @@ class LockedDropout(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, cfg):
         super(Encoder, self).__init__()
-        expand_dims = [128, 512]
+        # expand_dims = [128, 512]
+        expand_dims = cfg['encoder']['expand_dims']
+        kernel_size = cfg['encoder']['kernel_size']
 
         self.embed = nn.Sequential(
             PermuteBlock(),
-            nn.Conv1d(in_channels=input_size, out_channels=expand_dims[0], kernel_size=7, stride=1, padding=1),
+            nn.Conv1d(in_channels=input_size, out_channels=expand_dims[0], kernel_size=kernel_size, stride=1, padding=1),
             nn.BatchNorm1d(num_features=expand_dims[0]),
             nn.GELU(),
-            nn.Conv1d(in_channels=expand_dims[0], out_channels=expand_dims[1], kernel_size=7, stride=1, padding=1),
+            nn.Conv1d(in_channels=expand_dims[0], out_channels=expand_dims[1], kernel_size=kernel_size, stride=1, padding=1),
             nn.BatchNorm1d(num_features=expand_dims[1]),
             PermuteBlock()
         )
@@ -51,9 +53,9 @@ class Encoder(nn.Module):
 
         self.pBLSTMs = nn.Sequential(
             pBLSTM(input_size=expand_dims[1], hidden_size=hidden_size),
-            LockedDropout(0.3),
+            LockedDropout(cfg['pBLSTMs']['dropout_prob']),
             pBLSTM(input_size=2 * hidden_size, hidden_size=hidden_size),
-            LockedDropout(0.3),
+            LockedDropout(cfg['pBLSTMs']['dropout_prob']),
         )
 
     def forward(self, x, lens):
