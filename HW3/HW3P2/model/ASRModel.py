@@ -3,9 +3,11 @@
 # @Time    : 11/3/2024 10:27 PM
 # @Author  : Loading
 import torch
+import torchaudio
 
 from model.decoder import Decoder
 from model.encoder import Encoder
+from model.permute_block import PermuteBlock
 
 
 class ASRModel(torch.nn.Module):
@@ -13,16 +15,16 @@ class ASRModel(torch.nn.Module):
     def __init__(self, input_size, embed_size=192, output_size=41):
         super().__init__()
 
-        # self.augmentations  = torch.nn.Sequential(
-        #     #TODO Add Time Masking/ Frequency Masking
-        #     #Hint: See how to use PermuteBlock() function defined above
+        # self.augmentations = torch.nn.Sequential(
         #     PermuteBlock(),
         #     torchaudio.transforms.FrequencyMasking(freq_mask_param=10),
         #     torchaudio.transforms.TimeMasking(time_mask_param=100),
+        #     # torchaudio.transforms.TimeStretch(fixed_rate=0.9), # Time Stretch
         #     PermuteBlock(),
-        # ) # did augmentation in the collate_fn
-        self.encoder = Encoder(input_size, embed_size)  # TODO: Initialize Encoder
-        self.decoder = Decoder(embed_size * 2, output_size)  # TODO: Initialize Decoder
+        # )
+
+        self.encoder = Encoder(input_size, embed_size)
+        self.decoder = Decoder(embed_size * 2, output_size)
 
     def forward(self, x, lengths_x):
         # if self.training:

@@ -4,55 +4,65 @@
 # @Author  : Loading
 import os
 
-import numpy as np
 import torch
+import os
+import numpy as np
 from torch.nn.utils.rnn import pad_sequence
-
 
 class AudioDatasetTest(torch.utils.data.Dataset):
     def __init__(self, root, partition="test-clean"):
         """
         Initializes the dataset.
-        :param root:
-        :param partition:
+
+        Args:
+            root (str): Root directory containing the dataset.
+            partition (str): Dataset partition to load ('test-clean', etc.).
         """
-
-        # MFCC directory - use partition to acces train/dev directories from kaggle data using root
+        # Set MFCC directory and check if it exists
         self.mfcc_dir = os.path.join(root, partition, 'mfcc')
-        # List files in sefl.mfcc_dir using os.listdir in sorted order
-        self.mfcc_files = sorted(os.listdir(self.mfcc_dir))
+        if not os.path.exists(self.mfcc_dir):
+            raise FileNotFoundError(f"MFCC directory not found at {self.mfcc_dir}")
 
+        # Get and sort file list
+        self.mfcc_files = sorted(os.listdir(self.mfcc_dir))
         self.length = len(self.mfcc_files)
 
-        self.mfccs, self.transcripts = [], []
-
-        for i in range(len(self.mfcc_files)):
-            #   Load a single mfcc
-            mfcc = np.load(os.path.join(self.mfcc_dir, self.mfcc_files[i]))
-            mfcc = (mfcc - np.mean(mfcc, axis=0)) / np.std(mfcc, axis=0)
-
-            self.mfccs.append(mfcc)
-
     def __len__(self):
-
         """
-        Returns the length of the dataset
+        Returns the length of the dataset.
         """
         return self.length
 
     def __getitem__(self, ind):
-        mfcc = self.mfccs[ind]
+        """
+        Loads and returns a single MFCC feature tensor.
+
+        Args:
+            ind (int): Index of the example.
+
+        Returns:
+            torch.FloatTensor: Normalized MFCC tensor.
+        """
+        # Load and normalize MFCC data
+        mfcc = np.load(os.path.join(self.mfcc_dir, self.mfcc_files[ind]))
+        mfcc = (mfcc - np.mean(mfcc, axis=0)) / np.std(mfcc, axis=0)
         return torch.FloatTensor(mfcc)
 
     def collate_fn(self, batch):
-        batch_mfcc = []
-        lengths_mfcc = []
+        """
+        Custom collate function for padding sequences in batch.
 
-        for mfcc in batch:
-            batch_mfcc.append(mfcc)
-            lengths_mfcc.append(len(mfcc))
+        Args:
+            batch (list of torch.FloatTensor): List of MFCC tensors.
 
+        Returns:
+            tuple: Padded MFCC tensors and lengths of each sequence.
+        """
+        batch_mfcc = [mfcc for mfcc in batch]
+        lengths_mfcc = torch.tensor([mfcc.size(0) for mfcc in batch_mfcc], dtype=torch.long)
+
+        # Pad sequences
         batch_mfcc_pad = pad_sequence(batch_mfcc, batch_first=True)
 
-        # Return the following values: padded features, padded labels, actual length of features, actual length of the labels
-        return batch_mfcc_pad, torch.tensor(lengths_mfcc)
+        # Return padded features and actual lengths of features
+        return batch_mfcc_pad, lengths_mfcc

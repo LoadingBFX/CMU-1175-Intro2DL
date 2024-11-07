@@ -27,7 +27,7 @@ def set_seed(seed):
 
 def decode_prediction(output, output_lens, decoder, PHONEME_MAP):
     # TODO: look at docs for CTC.decoder and find out what is returned here. Check the shape of output and expected shape in decode.
-    beam_results, beam_scores, timesteps, out_seq_len = decoder.decode(output)  # lengths - list of lengths
+    beam_results, beam_scores, timesteps, out_seq_len = decoder.decode(output, seq_lens = output_lens)  # lengths - list of lengths
 
     pred_strings = []
     # print(beam_results.shape)
@@ -45,6 +45,9 @@ def calculate_levenshtein(output, label, output_lens, label_lens, decoder,
 
     dist = 0
     batch_size = label.shape[0]
+
+    # Apply temperature scaling
+    # output = output / 0.5
 
     pred_strings = decode_prediction(output, output_lens, decoder, PHONEME_MAP)
     # print(batch_size)
@@ -87,6 +90,7 @@ def train_model(model, train_loader, criterion, optimizer, device='cpu', scaler=
 
         # Another couple things you need for FP16.
         scaler.scale(loss).backward() # This is a replacement for loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         scaler.step(optimizer) # This is a replacement for optimizer.step()
         scaler.update() # This is something added just for FP16
 
@@ -141,14 +145,14 @@ def save_model(model, optimizer, scheduler, metric, epoch,path):
         path
     )
 
-def load_model(path, model, metric= 'valid_acc', optimizer= None, scheduler= None):
+def load_model(path, model, metric= 'valid_dist', optimizer= None, scheduler= None):
 
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
-    if optimizer != None:
+    if optimizer is not None:
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    if scheduler != None:
+    if scheduler is not None:
         scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
 
     epoch   = checkpoint['epoch']
