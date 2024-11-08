@@ -17,7 +17,7 @@ train:
 transforms: []  # Set of transformations
 scheduler:
   T_max: 100
-  patience: 3
+  patience: 2
 
 specaug:
   freq_mask_param: 10
@@ -35,7 +35,7 @@ pBLSTMs:
   dropout_prob: 0.3
 
 decoder:
-  dropout_prob: 0.5
+  dropout_prob: 0.2
 
 decode:
   # See https://github.com/flashlight/text/blob/main/flashlight/lib/text/decoder/LexiconDecoder.h#L20-L30
