@@ -35,15 +35,15 @@ class Encoder(nn.Module):
             nn.Conv1d(in_channels=input_size, out_channels=expand_dims[0], kernel_size=3, stride=1, padding=1),
             nn.BatchNorm1d(num_features=expand_dims[0]),
             nn.GELU(),
-            nn.Conv1d(in_channels=expand_dims[0], out_channels=expand_dims[1], kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(in_channels=expand_dims[0], out_channels=expand_dims[1], kernel_size=5, stride=1, padding=1),
             nn.BatchNorm1d(num_features=expand_dims[1]),
             PermuteBlock())
 
         self.pBLSTMs = nn.Sequential(
             pBLSTM(input_size=expand_dims[1], hidden_size=hidden_size),
-            LockedDropout(0.05),
+            LockedDropout(0.3),
             pBLSTM(input_size=2 * hidden_size, hidden_size=hidden_size),
-            LockedDropout(0.05),
+            LockedDropout(0.2),
         )
 
     def forward(self, x, lens):

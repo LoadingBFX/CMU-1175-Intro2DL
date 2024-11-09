@@ -58,13 +58,25 @@ LABELS = ARPAbet[:-2]
 audio_transforms = nn.Sequential(
     PermuteBlock(),
     torchaudio.transforms.FrequencyMasking(freq_mask_param=5),
-    torchaudio.transforms.TimeMasking(time_mask_param=100),
+    torchaudio.transforms.TimeMasking(time_mask_param=20),
     PermuteBlock()
 )
 
 def main():
     # Set the random seed for reproducibility
-    set_seed(42)
+    set_seed(29)
+
+    import wandb
+
+    # parse the config file from config.yaml
+    cfg = load_config("./config/config.yaml")
+
+    wandb.login(key="46b9373c96fe8f8327255e7da8a4046da7ffeef6")
+    run = wandb.init(
+        name=f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        project="hw3p2-after",  ### Project should be created in your wandb account
+        config=cfg  ### Wandb Config for your run
+    )
 
     # parse the config file from config.yaml
     cfg = load_config("./config/config.yaml")
@@ -130,7 +142,7 @@ def main():
     torch.cuda.empty_cache()
     model = ASRModel(
         input_size=28,
-        embed_size=512,
+        embed_size=1024,
         output_size=len(PHONEMES)
     ).to(device)
     print(model)
@@ -144,8 +156,8 @@ def main():
     # CTC Beam Decoder Doc: https://github.com/parlance/ctcdecode
     decoder = CTCBeamDecoder(LABELS, beam_width=cfg['train']['beam_width'], log_probs_input=True)
 
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=1e-8)
-
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-8)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=1)
     # Mixed Precision, if you need it
     scaler = torch.cuda.amp.GradScaler()
 
@@ -163,13 +175,13 @@ def main():
         print("\tTrain Loss {:.04f}\t Learning Rate {:.07f}".format(train_loss, curr_lr))
         print("\tVal Dist {:.04f}%\t Val Loss {:.04f}".format(valid_dist, valid_loss))
 
-        #
-        # wandb.log({
-        #     'train_loss': train_loss,
-        #     'valid_dist': valid_dist,
-        #     'valid_loss': valid_loss,
-        #     'lr'        : curr_lr
-        # })
+
+        wandb.log({
+            'train_loss': train_loss,
+            'valid_dist': valid_dist,
+            'valid_loss': valid_loss,
+            'lr'        : curr_lr
+        })
 
         if (epoch + 1) % cfg['train']['save_interval'] == 0 or (epoch + 1) == cfg['train']['epochs']:
             epoch_model_path = os.path.join(cfg['save_model_folder'], 'epoch_{}.pth'.format(epoch))
@@ -183,8 +195,8 @@ def main():
             # wandb.save(best_model_path)
             print("Saved best model")
           # You may find it interesting to exlplore Wandb Artifcats to version your models
-    # run.finish()
-    TEST_BEAM_WIDTH = 1
+    run.finish()
+    TEST_BEAM_WIDTH = 100
 
     test_decoder = CTCBeamDecoder(LABELS, beam_width=TEST_BEAM_WIDTH, log_probs_input=True)
     results = []

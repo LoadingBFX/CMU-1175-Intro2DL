@@ -24,8 +24,14 @@ class Decoder(torch.nn.Module):
             nn.Linear(2048, 1024),
             nn.GELU(),
             PermuteBlock(), torch.nn.BatchNorm1d(1024), PermuteBlock(),
-            nn.Dropout(0.2),
-            nn.Linear(1024, output_size)
+            nn.Dropout(0.1),
+
+            nn.Linear(1024, 512),
+            nn.GELU(),
+            PermuteBlock(), torch.nn.BatchNorm1d(512), PermuteBlock(),
+            nn.Dropout(0.1),
+
+            nn.Linear(512, output_size),
         )
 
         self.softmax = torch.nn.LogSoftmax(dim=2)
