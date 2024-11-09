@@ -4,8 +4,6 @@
 # @Author  : Loading
 
 import torchaudio
-from s3prl.schedulers import get_linear_schedule_with_warmup
-
 import wandb
 from torch.utils.data import Dataset, DataLoader
 import torch
@@ -56,19 +54,18 @@ ARPAbet = list(CMUdict_ARPAbet.values())
 
 PHONEMES = CMUdict[:-2]
 LABELS = ARPAbet[:-2]
-print("Phonemes: ", len(PHONEMES))
 
-# audio_transforms = nn.Sequential(
-#     PermuteBlock(),
-#     torchaudio.transforms.FrequencyMasking(freq_mask_param=5),
-#     torchaudio.transforms.TimeMasking(time_mask_param=100),
-#     PermuteBlock()
-# )
-
+audio_transforms = nn.Sequential(
+    PermuteBlock(),
+    torchaudio.transforms.FrequencyMasking(freq_mask_param=5),
+    torchaudio.transforms.TimeMasking(time_mask_param=20),
+    PermuteBlock()
+)
 
 def main():
     # Set the random seed for reproducibility
-    set_seed(42)
+    set_seed(29)
+
     import wandb
 
     # parse the config file from config.yaml
@@ -76,18 +73,13 @@ def main():
 
     wandb.login(key="46b9373c96fe8f8327255e7da8a4046da7ffeef6")
     run = wandb.init(
-        name=f"{cfg['train']['epochs']}ep_{cfg['model']['input_size']}in_{cfg['model']['embed_size']}em_{cfg['specaug']['freq_mask_param']}fmp_{cfg['specaug']['time_mask_param']}tmp_{cfg['decode']['beam_width']}bw_{cfg['encoder']['kernel_size']}ks_{cfg['pBLSTMs']['dropout_prob']}pblstm_{cfg['decoder']['dropout_prob']}ddp",
-        project="hw3p2-ablations",  ### Project should be created in your wandb account
+        name=f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        project="hw3p2-after",  ### Project should be created in your wandb account
         config=cfg  ### Wandb Config for your run
     )
 
-
-    # audio_transforms = nn.Sequential(
-    #     PermuteBlock(),
-    #     torchaudio.transforms.FrequencyMasking(freq_mask_param= cfg['specaug']["freq_mask_param"]),
-    #     torchaudio.transforms.TimeMasking(time_mask_param=cfg['specaug']["time_mask_param"]),
-    #     PermuteBlock()
-    # )
+    # parse the config file from config.yaml
+    cfg = load_config("./config/config.yaml")
 
     last_epoch_completed = 0
     start = last_epoch_completed
@@ -102,7 +94,8 @@ def main():
     # Create objects for the dataset class
     train_data = AudioDataset(root=cfg['data_folder'],
                               phonemes=PHONEMES,
-                              partition="train-clean-100")
+                              partition="train-clean-100",
+                              audio_transforms=audio_transforms)
 
     val_data = AudioDataset(root=cfg['data_folder'],
                             phonemes=PHONEMES,
@@ -148,9 +141,8 @@ def main():
 
     torch.cuda.empty_cache()
     model = ASRModel(
-        cfg=cfg,
-        input_size=cfg['model']['input_size'],
-        embed_size=cfg['model']['embed_size'],
+        input_size=28,
+        embed_size=1024,
         output_size=len(PHONEMES)
     ).to(device)
     print(model)
@@ -158,22 +150,14 @@ def main():
     criterion = torch.nn.CTCLoss(blank=0, reduction='mean',
                                  zero_infinity=False)  # Define CTC loss as the criterion. How would the losses be reduced?
 
-
+    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['train']['lr'])  # What goes in here?
 
     # Declare the decoder. Use the CTC Beam Decoder to decode phonemes
     # CTC Beam Decoder Doc: https://github.com/parlance/ctcdecode
-    decoder = CTCBeamDecoder(LABELS, beam_width=cfg['decode']['beam_width'], log_probs_input=True)
+    decoder = CTCBeamDecoder(LABELS, beam_width=cfg['train']['beam_width'], log_probs_input=True)
 
-
-    # optimizer = torch.optim.AdamW(model.parameters(), lr=float(cfg['train']['lr']))  # What goes in here?
-    optimizer = torch.optim.Adam(model.parameters(), lr=float(cfg['train']['lr']))
-
-    # optimizer = optim.AdamW(model.parameters(), lr=float(cfg['train']['lr']), weight_decay=cfg['train']['weight_decay'])
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=cfg['scheduler']['patience'])
-
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg['scheduler']['T_max'], eta_min=1e-9)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
-
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-8)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=1)
     # Mixed Precision, if you need it
     scaler = torch.cuda.amp.GradScaler()
 
@@ -186,10 +170,7 @@ def main():
 
         train_loss = train_model(model, train_loader, criterion, optimizer, device, scaler)
         valid_loss, valid_dist = validate_model(model, val_loader, decoder, LABELS, criterion, device)
-        if isinstance(scheduler, torch.optim.lr_scheduler.CosineAnnealingLR):
-            scheduler.step()
-        else:
-            scheduler.step(valid_dist)
+        scheduler.step(valid_dist)
 
         print("\tTrain Loss {:.04f}\t Learning Rate {:.07f}".format(train_loss, curr_lr))
         print("\tVal Dist {:.04f}%\t Val Loss {:.04f}".format(valid_dist, valid_loss))
@@ -205,19 +186,17 @@ def main():
         if (epoch + 1) % cfg['train']['save_interval'] == 0 or (epoch + 1) == cfg['train']['epochs']:
             epoch_model_path = os.path.join(cfg['save_model_folder'], 'epoch_{}.pth'.format(epoch))
             save_model(model, optimizer, scheduler, ['valid_dist', valid_dist], epoch, epoch_model_path)
-            wandb.save(epoch_model_path)
+            # wandb.save(epoch_model_path)
             print("Saved epoch model")
 
         if valid_dist <= best_lev_dist:
             best_lev_dist = valid_dist
             save_model(model, optimizer, scheduler, ['valid_dist', valid_dist], epoch, best_model_path)
-            wandb.save(best_model_path)
+            # wandb.save(best_model_path)
             print("Saved best model")
           # You may find it interesting to exlplore Wandb Artifcats to version your models
     run.finish()
-
-
-    TEST_BEAM_WIDTH = 41
+    TEST_BEAM_WIDTH = 100
 
     test_decoder = CTCBeamDecoder(LABELS, beam_width=TEST_BEAM_WIDTH, log_probs_input=True)
     results = []
