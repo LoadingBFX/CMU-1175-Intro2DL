@@ -1,0 +1,66 @@
+Name: "pretrain"
+DEBUG: False
+###### Dataset -----------------------------------------------------------------
+root                      : "./data/11785-fall-24-hw4p2-transformer-asr/hw4p2"                # TODO: Set the root path of your data
+unpaired_text_partition   : "text-for-LM"               # unpaired text for LM pre-training
+train_partition           : "train-clean-100"           # train-clean-100
+val_partition             : "dev-clean"                 # validation partition
+test_partition            : "test-clean"                # test partition
+NUM_WORKERS               : 4
+subset                    : 1        # Load a subset of the data (for debugging, testing, etc)
+token_type                : "char"     # [char, 1k, 10k]
+feat_type                 : 'fbank'    # ['fbank', 'mfcc']
+num_feats                 : 80         # fbanks:[20-80], mfcc:[12:20]
+batch_size                : 32
+norm                      : 'cepstral' # ['global_mvn', 'cepstral']
+
+###### SpecAugment ---------------------------------------------------------------
+specaug                   : True
+specaug_conf:
+  apply_freq_mask         : True
+  freq_mask_width_range   : 4
+  num_freq_mask           : 2 # 2-4
+  apply_time_mask         : True
+  time_mask_width_range   : 50
+  num_time_mask           : 2 #6-8
+
+###### Network Specs -------------------------------------------------------------
+d_model                   : 256
+d_ff                      : 1024 # feed-forward hidden layer size mostly 4*d_model
+
+###### Embedding Specs -----------------------------------------------------------
+time_stride               : 4 # time-wise downsampling
+feature_stride            : 2 # feature-wise downsampling
+embed_dropout             : 0.2
+
+###### Encoder Specs -------------------------------------------------------------
+enc_dropout               : 0.2
+enc_num_layers            : 2 # number of encoder layers defualt 2
+enc_num_heads             : 4
+
+###### Decoder Specs -------------------------------------------------------------
+dec_dropout               : 0.2
+dec_num_layers            : 2 # number of decoder layers defualt 2
+dec_num_heads             : 4
+
+###### Base Parameters -----------------------------------------------------------
+
+use_ctc                   : True
+ctc_weight                : 0.2
+optimizer                 : "AdamW" # Adam, AdamW, SGD
+momentum                  : 0.0
+nesterov                  : True
+learning_rate             : 1E-3
+scheduler                 : "CosineAnnealing" # ['ReduceLR', 'CosineAnnealing']
+factor                    : 0.2
+patience                  : 2
+
+e                         : 0
+epochs                    : 60
+
+###### Wandb ----------------------------------------------------------
+use_wandb                 : True
+resume_logging            : False
+
+
+#### DecoderLM
