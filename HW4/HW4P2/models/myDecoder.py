@@ -16,23 +16,22 @@ class DecoderLayer(nn.Module):
         super().__init__()
 
         # @TODO: fill in the blanks appropriately (given the modules above)
-        self.mha1       = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, dropout=dropout,batch_first=True)
-        self.mha2       = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, dropout=dropout,batch_first=True)
-
-        self.ffn        = nn.Sequential(
+        self.mha1 = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, dropout=dropout)
+        self.mha2 = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, dropout=dropout)
+        self.ffn = nn.Sequential(
             nn.Linear(d_model, d_ff),
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(d_ff, d_model)
         )
-        self.identity   = nn.Identity()
-        self.pre_norm   = nn.LayerNorm(d_model)
+        self.identity = nn.Identity()
+        self.pre_norm = nn.LayerNorm(d_model)
         self.layernorm1 = nn.LayerNorm(d_model)
         self.layernorm2 = nn.LayerNorm(d_model)
         self.layernorm3 = nn.LayerNorm(d_model)
-        self.dropout1   = nn.Dropout(dropout)
-        self.dropout2   = nn.Dropout(dropout)
-        self.dropout3   = nn.Dropout(dropout)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+        self.dropout3 = nn.Dropout(dropout)
 
     def forward(self, padded_targets, enc_output, pad_mask_enc, pad_mask_dec, slf_attn_mask):
 
@@ -43,39 +42,52 @@ class DecoderLayer(nn.Module):
         #   (4) layer normalization
 
         x = self.pre_norm(padded_targets)
-        mha1_output, mha1_attn_weights = self.mha1(x, x, x, key_padding_mask=pad_mask_dec, attn_mask=slf_attn_mask)
-        mha1_output = self.dropout1(mha1_output)
-        x = x + mha1_output  # Residual connection
-        x = self.layernorm1(x)
 
+        q = k = v = x.transpose(0, 1)  # Transpose to (seq_len, batch_size, d_model)
+        mha1_output, mha1_attn_weights = self.mha1(
+            query=q,
+            key=k,
+            value=v,
+            attn_mask=slf_attn_mask,
+            key_padding_mask=pad_mask_dec
+        )
+        mha1_output = self.dropout1(mha1_output)
+        residual1 = q + mha1_output
+        mha1_output = self.layernorm1(residual1).transpose(0, 1)
 
         #   Step 2: Cross Attention
         #   (1) pass through the Multi-Head Attention (Hint: you need to store weights here as part of the return value)
-              #  think about if key,value,query here are the same as the previous one?
+        #  think about if key,value,query here are the same as the previous one?
         #   (2) add dropout
         #   (3) residual connections
         #   (4) layer normalization
 
         if enc_output is None:
-            # TODO: Implement this
-            mha2_output       = self.identity(padded_targets)
+            mha2_output = self.identity(padded_targets)
             mha2_attn_weights = torch.zeros_like(mha1_attn_weights)
         else:
-            mha2_output, mha2_attn_weights = self.mha2(x, enc_output, enc_output, key_padding_mask=pad_mask_enc)
+            q = mha1_output.transpose(0, 1)
+            k = v = enc_output.transpose(0, 1)
+            mha2_output, mha2_attn_weights = self.mha2(
+                query=q,
+                key=k,
+                value=v,
+                attn_mask=None,
+                key_padding_mask=pad_mask_enc
+            )
             mha2_output = self.dropout2(mha2_output)
-            x = x + mha2_output  # Residual connection
-            x = self.layernorm2(x)
+            residual2 = q + mha2_output  # Residual connection
+            mha2_output = self.layernorm2(residual2).transpose(0, 1)
 
         #   Step 3: Feed Forward Network
         #   (1) pass through the FFN
         #   (2) add dropout
         #   (3) residual connections
         #   (4) layer normalization
-        ffn_output = self.ffn(x)
+
+        ffn_output = self.ffn(mha2_output)
         ffn_output = self.dropout3(ffn_output)
-        x = x + ffn_output  # Residual connection
-        # TODO: Implement this
-        x = self.layernorm3(x)
+        ffn_output = self.layernorm3(mha2_output + ffn_output)
 
         return ffn_output, mha1_attn_weights, mha2_attn_weights
 
@@ -91,19 +103,22 @@ class Decoder(torch.nn.Module):
 
         super().__init__()
 
-        self.max_len        = max_len
-        self.num_layers     = num_layers
-        self.num_heads      = num_heads
+        self.max_len = max_len
+        self.num_layers = num_layers
+        self.num_heads = num_heads
 
         # use torch.nn.ModuleList() with list comprehension looping through num_layers
         # @NOTE: think about what stays constant per each DecoderLayer (how to call DecoderLayer)
-        self.dec_layers = nn.ModuleList([DecoderLayer(d_model, num_heads, d_ff, dropout) for _ in range(num_layers)])
+        self.dec_layers = nn.ModuleList([
+            DecoderLayer(d_model, num_heads, d_ff, dropout)
+            for _ in range(num_layers)
+        ])
 
-        self.target_embedding       = nn.Embedding(target_vocab_size, d_model)  # use torch.nn.Embedding
-        self.positional_encoding    = PositionalEncoding(d_model, max_len)
-        self.final_linear           = nn.Linear(d_model, target_vocab_size)
-        self.dropout                = nn.Dropout(dropout)
-
+        self.target_embedding = nn.Embedding(num_embeddings=target_vocab_size,
+                                             embedding_dim=d_model)  # use torch.nn.Embedding
+        self.positional_encoding = PositionalEncoding(d_model=d_model, max_len=max_len)
+        self.final_linear = nn.Linear(d_model, target_vocab_size)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, padded_targets, target_lengths, enc_output, enc_input_lengths):
 
@@ -125,28 +140,25 @@ class Decoder(torch.nn.Module):
         x = self.positional_encoding(x)
         x = self.dropout(x)
 
-
         # Step3:  Create attention mask to ignore padding positions in the input sequence during attention calculation
         pad_mask_enc = None
         if enc_output is not None:
-            pad_mask_enc = PadMask(padded_input=enc_output, input_lengths=enc_input_lengths).to(enc_output.device)
-
+            pad_mask_enc = PadMask(padded_input=enc_output, input_lengths=enc_input_lengths)
+            pad_mask_enc = pad_mask_enc.to(enc_output.device)
 
         # Step4: Pass through decoder layers
         # @NOTE: store your mha1 and mha2 attention weights inside a dictionary
         # @NOTE: you will want to retrieve these later so store them with a useful name
         runnint_att = {}
-        for i in range(self.num_layers):
-            x, runnint_att['layer{}_dec_self'.format(i + 1)], runnint_att['layer{}_dec_cross'.format(i + 1)] = self.dec_layers[i](
+        for i, layer in enumerate(self.dec_layers):
+            x, runnint_att['layer{}_dec_self'.format(i + 1)], runnint_att['layer{}_dec_cross'.format(i + 1)] = layer(
                 x, enc_output, pad_mask_enc, pad_mask_dec, causal_mask
             )
 
-
         # Step5: linear layer (Final Projection) for next character prediction
-        seq_out = self.final_linear(x)
+        seq_out = seq_out = self.final_linear(x)
 
         return seq_out, runnint_att
-
 
     def recognize_greedy_search(self, enc_output, enc_input_lengths, tokenizer):
         ''' passes the encoder outputs and its corresponding lengths through autoregressive network
@@ -177,12 +189,11 @@ class Decoder(torch.nn.Module):
         # remove the initial <SOS> token and pad sequences to the same length
         target_seq = target_seq[:, 1:]
         max_length = target_seq.size(1)
-        target_seq = torch.nn.functional.pad(target_seq,(0, self.max_len - max_length), value=tokenizer.PAD_TOKEN)
+        target_seq = torch.nn.functional.pad(target_seq,
+                                             (0, self.max_len - max_length), value=tokenizer.PAD_TOKEN)
 
         return target_seq
 
-
-    # def recognize_beam_search(self, enc_output, enc_input_lengths, tokenizer):
-    #   # TODO Beam Decoding
-    #   raise NotImplementedError
-
+    def recognize_beam_search(self, enc_output, enc_input_lengths, tokenizer):
+        # TODO Beam Decoding
+        raise NotImplementedError

@@ -7,6 +7,9 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+
+
 def save_attention_plot(plot_path, attention_weights, epoch=0, mode: Literal['full', 'dec_cond_lm', 'dec_lm'] = 'full'):
     """
     Saves attention weights plot to a specified path.
@@ -120,7 +123,6 @@ def load_checkpoint(
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
 
     return model, optimizer, scheduler
-
 
 def get_optimizer(model, config):
     optimizer = None

@@ -7,20 +7,19 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-
 # 2-Layer BiLSTM
 class BiLSTMEmbedding(nn.Module):
     def __init__(self, input_dim, output_dim, dropout):
         super(BiLSTMEmbedding, self).__init__()
         self.bilstm = nn.LSTM(
-            input_dim, output_dim // 2,
-            num_layers=1,
-            batch_first=True,
-            bidirectional=True,
-            dropout=dropout
+                input_dim, output_dim // 2,
+                num_layers=1,
+                batch_first=True,
+                bidirectional=True,
+                dropout=dropout
         )
 
-    def forward(self, x, x_len):
+    def forward(self, x,  x_len):
         """
         Args:
             x.    : Input tensor (batch_size, seq_len, input_dim)
@@ -30,13 +29,14 @@ class BiLSTMEmbedding(nn.Module):
         """
         # BiLSTM expects (batch_size, seq_len, input_dim)
         # Pack the padded sequence to avoid computing over padded tokens
+
         packed_input = pack_padded_sequence(x, x_len.cpu(), batch_first=True, enforce_sorted=False)
+
         # Pass through the BiLSTM
         packed_output, _ = self.bilstm(packed_input)
         # Unpack the sequence to restore the original padded shape
         output, _ = pad_packed_sequence(packed_output, batch_first=True)
         return output
-
 
 ### DO NOT MODIFY
 
@@ -62,7 +62,6 @@ class Conv2DSubsampling(torch.nn.Module):
             torch.nn.Conv2d(output_dim, output_dim, kernel_size=3, stride=(tstride2, fstride2)),
             torch.nn.ReLU(),
         )
-
         self.time_downsampling_factor = tstride1 * tstride2
         # Calculate output dimension for the linear layer
         conv_out_dim = (input_dim - (3 - 1) - 1) // fstride1 + 1
@@ -89,19 +88,19 @@ class Conv2DSubsampling(torch.nn.Module):
         return x
 
     def closest_factors(self, n):
-        factor = int(n ** 0.5)
+        factor = int(n**0.5)
         while n % factor != 0:
             factor -= 1
         # Return the factor pair
         return max(factor, n // factor), min(factor, n // factor)
 
 
+
 class SpeechEmbedding(nn.Module):
     def __init__(self, input_dim, output_dim, time_stride, feature_stride, dropout):
         super(SpeechEmbedding, self).__init__()
 
-        self.cnn = Conv2DSubsampling(input_dim, output_dim, dropout=dropout, time_stride=time_stride,
-                                     feature_stride=feature_stride)
+        self.cnn = Conv2DSubsampling(input_dim, output_dim, dropout=dropout, time_stride=time_stride, feature_stride=feature_stride)
         self.blstm = BiLSTMEmbedding(output_dim, output_dim, dropout)
         self.time_downsampling_factor = self.cnn.time_downsampling_factor
 

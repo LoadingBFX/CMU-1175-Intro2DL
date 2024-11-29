@@ -12,7 +12,7 @@ class PositionalEncoding(torch.nn.Module):
         super().__init__()
 
         # Initialize a tensor to hold the positional encodings
-        pe          = torch.zeros(int(max_len), int(d_model))
+        pe          = torch.zeros(max_len, d_model)
 
         # Create a tensor representing the positions (0 to max_len-1)
         position    = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
@@ -30,4 +30,4 @@ class PositionalEncoding(torch.nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        return x + self.pe[:, :x.size(1)]
+      return x + self.pe[:, :x.size(1)]

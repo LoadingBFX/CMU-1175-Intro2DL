@@ -46,19 +46,18 @@ import shutil
 warnings.filterwarnings("ignore")
 
 import torchaudio
-
 def train_step(
-        model: nn.Module,
-        criterion: nn.CrossEntropyLoss,
-        ctc_loss: nn.CTCLoss,
-        ctc_weight: float,
-        optimizer,
-        scheduler,
-        scaler,
-        device: str,
-        train_loader: DataLoader,
-        tokenizer: Any,
-        mode: Literal['full', 'dec_cond_lm', 'dec_lm']
+    model: nn.Module,
+    criterion: nn.CrossEntropyLoss,
+    ctc_loss: nn.CTCLoss,
+    ctc_weight: float,
+    optimizer,
+    scheduler,
+    scaler,
+    device: str,
+    train_loader: DataLoader,
+    tokenizer: Any,
+    mode: Literal['full', 'dec_cond_lm', 'dec_lm']
 ) -> Tuple[float, float, torch.Tensor]:
     """
     Trains a model for one epoch based on the specified training mode.
@@ -101,22 +100,13 @@ def train_step(
 
         # Forward pass with mixed-precision
         with torch.autocast(device_type=device, dtype=torch.float16):
-            raw_predictions, attention_weights, ctc_out = model(inputs, inputs_lengths, targets_shifted,
-                                                                targets_lengths, mode=mode)
+            raw_predictions, attention_weights, ctc_out = model(inputs, inputs_lengths, targets_shifted, targets_lengths, mode=mode)
             padding_mask = torch.logical_not(torch.eq(targets_shifted, tokenizer.PAD_TOKEN))
-
-            if torch.isnan(raw_predictions).any() or torch.isinf(raw_predictions).any():
-                print("NaN or Inf detected in the output tensor.")
 
             # Calculate cross-entropy loss
             ce_loss = criterion(raw_predictions.transpose(1, 2), targets_golden) * padding_mask
             loss = ce_loss.sum() / padding_mask.sum()
 
-            if torch.isnan(loss) or torch.isinf(loss):
-                print("Loss is NaN or Inf, skipping backward pass.")
-                print(torch.isnan(loss))
-                print(torch.isinf(loss))
-                continue  # Skip this iteration if the loss is invalid
 
             # Optionally optimize a weighted sum of ce and ctc_loss from the encoder outputs
             # Only available during full transformer training, a ctc_loss must be passed in
@@ -125,19 +115,8 @@ def train_step(
                 inputs_lengths = inputs_lengths.clamp(max=ctc_out.size(0))
                 loss += ctc_weight * ctc_loss(ctc_out, targets_golden, inputs_lengths, targets_lengths)
 
-        # --- Check for NaN/Inf in gradients ---
-        for name, param in model.named_parameters():
-            if param.grad is not None:
-                if torch.isnan(param.grad).any() or torch.isinf(param.grad).any():
-                    print(f"NaN or Inf gradients found in {name}")
-                    break  # Or continue with debugging steps
-
         # Backward pass and optimization with mixed-precision
         scaler.scale(loss).backward()
-
-        # Clip gradients (if needed)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
-
         scaler.step(optimizer)
         scaler.update()
 
@@ -189,13 +168,13 @@ def validate_step(
                                                                average WER, and average CER.
     """
     model.eval()
-    batch_bar = tqdm(total=len(val_loader), dynamic_ncols=True, leave=True, position=0, desc="Val")
+    batch_bar = tqdm(total=len(val_loader), dynamic_ncols=True, leave=False, position=0, desc="Val")
 
     running_distance = 0.0
     running_wer = 0.0
     running_cer = 0.0
     json_output = {}
-
+    printed_sample = False
     with torch.inference_mode():
         for i, batch in enumerate(val_loader):
             # Separate inputs and targets based on the mode
@@ -206,8 +185,9 @@ def validate_step(
                 inputs, inputs_lengths = None, None
                 _, targets_shifted, targets_golden, _, targets_lengths = batch
 
-            # targets_shifted = targets_shifted.to(device)
-            targets_golden = targets_golden.to(device)
+            if targets_shifted is not None and targets_golden is not None:
+                targets_shifted = targets_shifted.to(device)
+                targets_golden = targets_golden.to(device)
 
             # Perform recognition and calculate metrics
             greedy_predictions = model.recognize(inputs, inputs_lengths, tokenizer=tokenizer, mode=mode)
@@ -219,6 +199,16 @@ def validate_step(
             running_wer += wer
             running_cer += cer
             json_output[i] = {"Input": y_string, "Output": pred_string}
+
+            if not printed_sample:
+                gt_l = []
+                pred_l = []
+                for gt, pred in zip(y_string, pred_string):
+                    gt_l.append(gt)
+                    pred_l.append(pred)
+                print(f"Ground Truth: {gt}")
+                print(f"Prediction:  {pred}")
+                printed_sample = True
 
             # Update progress bar
             batch_bar.set_postfix(
@@ -248,7 +238,7 @@ def validate_step(
 def test_step(model, test_loader, tokenizer, device):
     model.eval()
     # progress bar
-    batch_bar = tqdm(total=len(test_loader), dynamic_ncols=True, leave=True, position=0, desc="Test", ncols=5)
+    batch_bar = tqdm(total=len(test_loader), dynamic_ncols=True, leave=False, position=0, desc="Test", ncols=5)
 
     predictions = []
 
@@ -258,7 +248,7 @@ def test_step(model, test_loader, tokenizer, device):
         inputs, _, _, inputs_lengths, _ = batch
         inputs = inputs.to(device)
 
-        with torch.inference_mode():  # TODO():
+        with torch.inference_mode():
             greedy_predictions = model.recognize(inputs, inputs_lengths, tokenizer=tokenizer, mode='full')
 
         # @NOTE: modify the print_example to print more or less validation examples
@@ -268,14 +258,11 @@ def test_step(model, test_loader, tokenizer, device):
         ## TODO decode each sequence in the batch
         for batch_idx in range(batch_size):
             # trim predictons upto the EOS_TOKEN
-            # Convert tensor predictions into tokens using the tokenizer
+            pred_sequence = greedy_predictions[batch_idx].tolist()
+            if tokenizer.EOS_TOKEN in pred_sequence:
+                pred_sequence = pred_sequence[:pred_sequence.index(tokenizer.EOS_TOKEN)]
 
-            pad_indices = torch.where(greedy_predictions[batch_idx] == tokenizer.EOS_TOKEN)[0]
-            lowest_pad_idx = pad_indices.min().item() if pad_indices.numel() > 0 else len(greedy_predictions[batch_idx])
-            pred_trimmed = greedy_predictions[batch_idx, :lowest_pad_idx]
-
-            # Decode the predicted token IDs to string
-            pred_string = tokenizer.decode(pred_trimmed)
+            pred_string = tokenizer.decode(pred_sequence)
 
             batch_pred.append(pred_string)
 

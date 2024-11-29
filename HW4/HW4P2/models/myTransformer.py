@@ -38,11 +38,25 @@ class Transformer(nn.Module):
         self.embedding = SpeechEmbedding(input_dim, d_model, time_stride, feature_stride, embed_dropout)
         speech_max_len = int(np.ceil(speech_max_len / self.embedding.time_downsampling_factor))
 
-        self.encoder = Encoder(enc_num_layers, d_model, enc_num_heads, d_ff, speech_max_len, target_vocab_size,
-                               enc_dropout)
+        self.encoder = Encoder(
+            num_layers=enc_num_layers,
+            d_model=d_model,
+            num_heads=enc_num_heads,
+            d_ff=d_ff,
+            max_len=speech_max_len,
+            target_vocab_size=target_vocab_size,
+            dropout=enc_dropout,
+        )
 
-        self.decoder = Decoder(dec_num_layers, d_model, dec_num_heads, d_ff, dec_dropout, trans_max_len,
-                               target_vocab_size)
+        self.decoder = Decoder(
+            num_layers=dec_num_layers,
+            d_model=d_model,
+            num_heads=dec_num_heads,
+            d_ff=d_ff,
+            dropout=dec_dropout,
+            max_len=trans_max_len,
+            target_vocab_size=target_vocab_size,
+        )
 
     def forward(self, padded_input, input_lengths, padded_target, target_lengths,
                 mode: Literal['full', 'dec_cond_lm', 'dec_lm'] = 'full'):
